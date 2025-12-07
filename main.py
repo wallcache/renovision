@@ -520,19 +520,6 @@ async def generate_renovation_image(request: RenovationRequest) -> str:
 # API ENDPOINTS
 # ============================================
 
-@app.get("/")
-async def root():
-    return {
-        "service": "Renovision API",
-        "version": "1.0.0",
-        "status": "running",
-        "endpoints": {
-            "/property": "POST - Extract images from Rightmove listing",
-            "/renovate": "POST - Generate renovation visualisation",
-            "/health": "GET - Health check"
-        }
-    }
-
 
 @app.get("/health")
 async def health_check():
