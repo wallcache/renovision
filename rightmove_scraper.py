@@ -378,6 +378,8 @@ def extract_property_details(data: dict, soup: BeautifulSoup) -> dict:
     return details
 
 
+
+
 async def scrape_rightmove_listing(url: str, timeout: float = 30.0) -> PropertyListing:
     """
     Scrape a Rightmove property listing.
@@ -458,6 +460,37 @@ async def scrape_rightmove_listing(url: str, timeout: float = 30.0) -> PropertyL
             description=details['description'],
             features=details['features']
         )
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class PropertyRequest(BaseModel):
+    url: str
+
+@app.post("/property")
+async def get_property(req: PropertyRequest):
+    try:
+        listing = await scrape_rightmove_listing(req.url)
+        # Convert PropertyImage dataclass to dicts
+        images = [img.__dict__ for img in listing.images]
+        return {
+            "url": listing.url,
+            "property_id": listing.property_id,
+            "address": listing.address,
+            "price": listing.price,
+            "property_type": listing.property_type,
+            "bedrooms": listing.bedrooms,
+            "bathrooms": listing.bathrooms,
+            "images": images,
+            "floorplan_urls": listing.floorplan_urls,
+            "agent_name": listing.agent_name,
+            "description": listing.description,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ============================================
