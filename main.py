@@ -665,6 +665,10 @@ async def generate_renovation(request: RenovationRequest):
 async def health_check():
     return {"status": "healthy", "provider": IMAGE_PROVIDER}
 
+from fastapi.staticfiles import StaticFiles
+
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
+
 
 # ============================================
 # RUN SERVER
