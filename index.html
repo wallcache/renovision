@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renovision — See Your Future Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwindcss.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            linen: {
+              50: '#fdfcfb',
+              100: '#faf8f4',
+              200: '#f2efe9',
+              300: '#e8e4dc',
+              400: '#d4cfc4',
+              500: '#b8b1a4',
+              600: '#a89f93',
+              700: '#8a8278',
+              800: '#6b655c',
+              900: '#2c2c2c',
+            },
+            taupe: {
+              light: '#c4bbb0',
+              DEFAULT: '#a89f93',
+              dark: '#8a8278',
+            },
+            sage: {
+              light: '#d4ddd4',
+              DEFAULT: '#9aab9a',
+              dark: '#7a8f7a',
+            },
+            clay: {
+              light: '#e8d8cc',
+              DEFAULT: '#c9a88a',
+              dark: '#a68b6a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #faf8f4;
+      color: #2c2c2c;
+      min-height: 100vh;
+    }
+    
+    .font-serif {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+    
+    /* Subtle linen texture */
+    .linen-texture {
+      background-image: 
+        linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+    }
+    
+    /* Card styles */
+    .card {
+      background: linear-gradient(145deg, #fdfcfb 0%, #f8f6f2 100%);
+      border: 1px solid rgba(168, 159, 147, 0.15);
+      box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(0, 0, 0, 0.02);
+    }
+    
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.06),
+        0 8px 24px rgba(0, 0, 0, 0.04);
+      border-color: rgba(168, 159, 147, 0.3);
+    }
+    
+    /* Image card selection */
+    .image-card {
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .image-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent 60%, rgba(44, 44, 44, 0.4) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .image-card:hover::after {
+      opacity: 1;
+    }
+    
+    .image-card:hover {
+      transform: scale(1.02);
+    }
+    
+    .image-card:hover .select-hint {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    /* Toggle pill buttons */
+    .toggle-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    
+    .toggle-pill {
+      padding: 0.625rem 1.25rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 400;
+      background: #f2efe9;
+      border: 1px solid rgba(168, 159, 147, 0.2);
+      color: #6b655c;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+    
+    .toggle-pill:hover {
+      background: #e8e4dc;
+      border-color: rgba(168, 159, 147, 0.4);
+    }
+    
+    .toggle-pill.active {
+      background: #2c2c2c;
+      border-color: #2c2c2c;
+      color: #faf8f4;
+    }
+    
+    /* Button styles */
+    .btn-primary {
+      background: #2c2c2c;
+      color: #faf8f4;
+      border: none;
+      border-radius: 9999px;
+      padding: 1rem 2rem;
+      font-weight: 500;
+      transition: all 0.25s ease;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      background: #1a1a1a;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(44, 44, 44, 0.15);
+    }
+    
+    .btn-primary:disabled {
+      background: #d4cfc4;
+      cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      color: #6b655c;
+      border: 1px solid rgba(168, 159, 147, 0.3);
+      border-radius: 9999px;
+      padding: 0.875rem 1.75rem;
+      font-weight: 400;
+      transition: all 0.25s ease;
+    }
+    
+    .btn-secondary:hover {
+      background: #f2efe9;
+      border-color: rgba(168, 159, 147, 0.5);
+    }
+    
+    /* Input styles */
+    .input-field {
+      background: #fdfcfb;
+      border: 1px solid rgba(168, 159, 147, 0.25);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      font-size: 0.9375rem;
+      color: #2c2c2c;
+      transition: all 0.25s ease;
+      width: 100%;
+    }
+    
+    .input-field:focus {
+      outline: none;
+      border-color: #a89f93;
+      box-shadow: 0 0 0 3px rgba(168, 159, 147, 0.1);
+    }
+    
+    .input-field::placeholder {
+      color: #b8b1a4;
+    }
+    
+    /* Comparison slider */
+    .comparison-slider {
+      position: relative;
+      overflow: hidden;
+      cursor: ew-resize;
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+    
+    .comparison-slider img {
+      display: block;
+      width: 100%;
+      height: auto;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+      -khtml-user-drag: none;
+      -moz-user-drag: none;
+      -o-user-drag: none;
+    }
+    
+    .comparison-after {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    .comparison-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #faf8f4;
+      box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+    }
+    
+    .comparison-grip {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 44px;
+      height: 44px;
+      background: #faf8f4;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* Loading animation */
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.8; }
+    }
+    
+    .loading-pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+    
+    /* Fade animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+    
+    /* Checkbox toggle */
+    .toggle-checkbox {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      background: #e8e4dc;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: background 0.25s ease;
+    }
+    
+    .toggle-checkbox.active {
+      background: #2c2c2c;
+    }
+    
+    .toggle-checkbox::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      background: #fdfcfb;
+      border-radius: 50%;
+      transition: transform 0.25s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .toggle-checkbox.active::after {
+      transform: translateX(20px);
+    }
+    
+    /* Logo */
+    .logo-img {
+      height: 36px;
+      width: auto;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #f2efe9;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #d4cfc4;
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b8b1a4;
+    }
+  </style>
+</head>
+<body class="min-h-screen linen-texture">
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ============================================
+    // CONFIGURATION
+    // ============================================
+    
+    const API_BASE_URL = 'http://localhost:8000';
+    const LOGO_URL = 'logo.png';
+    
+    // Toggle options
+    const TIME_OF_DAY_OPTIONS = [
+      { id: 'day', label: 'Day' },
+      { id: 'night', label: 'Night' },
+      { id: 'dusk', label: 'Dusk' },
+      { id: 'dawn', label: 'Dawn' },
+      { id: 'golden_hour', label: 'Golden Hour' },
+    ];
+    
+    // Interior Design Style options
+    const DESIGN_STYLE_OPTIONS = [
+      { id: 'midcentury', label: 'Mid-Century Modern' },
+      { id: 'minimalist', label: 'Minimalist' },
+      { id: 'industrial', label: 'Industrial' },
+      { id: 'scandinavian', label: 'Scandinavian' },
+      { id: 'japanese', label: 'Japanese / Wabi-Sabi' },
+      { id: 'mediterranean', label: 'Mediterranean' },
+    ];
+    
+    // Room Type options
+    const ROOM_TYPE_OPTIONS = [
+      { id: 'bedroom', label: 'Bedroom' },
+      { id: 'living_room', label: 'Living Room' },
+      { id: 'kitchen', label: 'Kitchen' },
+      { id: 'dining_room', label: 'Dining Room' },
+      { id: 'bathroom', label: 'Bathroom' },
+      { id: 'office', label: 'Office / Study' },
+      { id: 'garden', label: 'Garden / Outdoor' },
+    ];
+    
+    const COLOUR_SCHEME_OPTIONS = [
+      { id: 'soft_linen', label: 'Soft Linen' },
+      { id: 'cream_core', label: 'Cream Core' },
+      { id: 'sage_calm', label: 'Sage Calm' },
+      { id: 'terracotta_sun', label: 'Terracotta Sun' },
+      { id: 'olive_grove', label: 'Olive Grove' },
+      { id: 'burgundy_depth', label: 'Burgundy Depth' },
+      { id: 'forest_green', label: 'Forest Green' },
+      { id: 'midnight_blue', label: 'Midnight Blue' },
+      { id: 'amber_glow', label: 'Amber Glow' },
+      { id: 'nordic_mist', label: 'Nordic Mist' },
+    ];
+    
+    const FLOORING_OPTIONS = [
+      { id: 'parquet', label: 'Parquet' },
+      { id: 'wood', label: 'Wood' },
+      { id: 'tiles', label: 'Tiles' },
+      { id: 'stone_slabs', label: 'Stone Slabs' },
+      { id: 'brushed_concrete', label: 'Brushed Concrete' },
+    ];
+    
+    const GREENERY_OPTIONS = [
+      { id: 'plants', label: 'Plants Only' },
+      { id: 'flowers', label: 'Flowers Only' },
+      { id: 'both', label: 'Both' },
+    ];
+
+    // ============================================
+    // COMPONENTS
+    // ============================================
+    
+    function TogglePill({ label, active, onClick }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`toggle-pill ${active ? 'active' : ''}`}
+        >
+          {label}
+        </button>
+      );
+    }
+    
+    function ToggleGroup({ label, options, value, onChange }) {
+      return (
+        <div className="mb-8">
+          <label className="block text-sm font-medium text-linen-700 mb-3">{label}</label>
+          <div className="toggle-group">
+            {options.map(option => (
+              <TogglePill
+                key={option.id}
+                label={option.label}
+                active={value === option.id}
+                onClick={() => onChange(value === option.id ? null : option.id)}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    function CheckboxToggle({ label, checked, onChange }) {
+      return (
+        <div className="flex items-center justify-between py-4 border-b border-linen-300/50">
+          <span className="text-sm text-linen-800">{label}</span>
+          <div 
+            className={`toggle-checkbox ${checked ? 'active' : ''}`}
+            onClick={() => onChange(!checked)}
+          />
+        </div>
+      );
+    }
+
+    // Loading dots animation component
+    function LoadingDots() {
+      const [dots, setDots] = useState('');
+      
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setDots(prev => {
+            if (prev === '...') return '';
+            return prev + '.';
+          });
+        }, 400);
+        return () => clearInterval(interval);
+      }, []);
+      
+      return <span className="inline-block w-6 text-left">{dots}</span>;
+    }
+
+    // Configuration summary for results page
+    function ConfigSummary({ style, roomType, timeOfDay, colourScheme, flooring, greenery }) {
+      const getLabelForId = (options, id) => {
+        const option = options.find(o => o.id === id);
+        return option ? option.label : null;
+      };
+      
+      const items = [
+        { label: 'Style', value: getLabelForId(DESIGN_STYLE_OPTIONS, style) },
+        { label: 'Room', value: getLabelForId(ROOM_TYPE_OPTIONS, roomType) },
+        { label: 'Lighting', value: getLabelForId(TIME_OF_DAY_OPTIONS, timeOfDay) },
+        { label: 'Colours', value: getLabelForId(COLOUR_SCHEME_OPTIONS, colourScheme) },
+        { label: 'Flooring', value: getLabelForId(FLOORING_OPTIONS, flooring) },
+        { label: 'Greenery', value: getLabelForId(GREENERY_OPTIONS, greenery) },
+      ].filter(item => item.value);
+      
+      if (items.length === 0) return null;
+      
+      return (
+        <div className="mt-6 p-4 card rounded-xl">
+          <p className="text-xs text-linen-500 mb-3 uppercase tracking-wide">Applied settings</p>
+          <div className="flex flex-wrap gap-2">
+            {items.map((item, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-linen-200/50 rounded-full text-sm text-linen-700">
+                <span className="text-linen-500">{item.label}:</span>
+                <span className="font-medium">{item.value}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function ComparisonSlider({ beforeSrc, afterSrc }) {
+      const containerRef = useRef(null);
+      const [sliderPosition, setSliderPosition] = useState(50);
+      const [isDragging, setIsDragging] = useState(false);
+
+      const handleMove = useCallback((clientX) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        setSliderPosition(percentage);
+      }, []);
+
+      const handleMouseDown = () => setIsDragging(true);
+      const handleMouseUp = () => setIsDragging(false);
+      
+      const handleMouseMove = useCallback((e) => {
+        if (isDragging) handleMove(e.clientX);
+      }, [isDragging, handleMove]);
+
+      const handleTouchMove = useCallback((e) => {
+        handleMove(e.touches[0].clientX);
+      }, [handleMove]);
+
+      useEffect(() => {
+        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mousemove', handleMouseMove);
+        return () => {
+          document.removeEventListener('mouseup', handleMouseUp);
+          document.removeEventListener('mousemove', handleMouseMove);
+        };
+      }, [handleMouseMove]);
+
+      return (
+        <div 
+          ref={containerRef}
+          className="comparison-slider rounded-2xl overflow-hidden card"
+          onMouseDown={handleMouseDown}
+          onTouchMove={handleTouchMove}
+          onDragStart={(e) => e.preventDefault()}
+        >
+          <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
+          
+          <div 
+            className="comparison-after"
+            style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+          >
+            <img src={afterSrc} alt="After" className="w-full" draggable="false" />
+          </div>
+          
+          <div 
+            className="comparison-handle"
+            style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+          >
+            <div className="comparison-grip">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2c2c2c" strokeWidth="2">
+                <path d="M18 8L22 12L18 16" />
+                <path d="M6 8L2 12L6 16" />
+              </svg>
+            </div>
+          </div>
+          
+          <div className="absolute bottom-4 left-4 bg-linen-900/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-linen-100">
+            After
+          </div>
+          <div className="absolute bottom-4 right-4 bg-linen-100/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-linen-700">
+            Before
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // MAIN APP
+    // ============================================
+    
+    function App() {
+      const [step, setStep] = useState(1);
+      const [rightmoveUrl, setRightmoveUrl] = useState('');
+      const [isLoading, setIsLoading] = useState(false);
+      const [error, setError] = useState(null);
+      
+      const [propertyInfo, setPropertyInfo] = useState(null);
+      const [propertyImages, setPropertyImages] = useState([]);
+      const [selectedImage, setSelectedImage] = useState(null);
+      
+      // Configuration toggles
+      const [designStyle, setDesignStyle] = useState(null);
+      const [roomType, setRoomType] = useState(null);
+      const [timeOfDay, setTimeOfDay] = useState(null);
+      const [colourScheme, setColourScheme] = useState(null);
+      const [flooring, setFlooring] = useState(null);
+      const [greenery, setGreenery] = useState(null);
+      const [extraNotes, setExtraNotes] = useState('');
+      const [autoDownload, setAutoDownload] = useState(false);
+      
+      const [generatedResult, setGeneratedResult] = useState(null);
+
+      const fetchPropertyImages = async (url) => {
+        setIsLoading(true);
+        setError(null);
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/property`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Failed to fetch property');
+          }
+          
+          const data = await response.json();
+          
+          setPropertyInfo({
+            address: data.address,
+            price: data.price,
+            bedrooms: data.bedrooms,
+            bathrooms: data.bathrooms,
+            propertyType: data.property_type
+          });
+          
+          const imagePromises = data.images.map(async (img) => {
+            const originalUrl = img.url_high_res || img.url;
+            try {
+              const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+              const proxyData = await proxyResponse.json();
+              return {
+                id: img.id,
+                url: proxyData.data_url,
+                originalUrl: originalUrl,
+                room: img.room,
+                caption: img.caption || ''
+              };
+            } catch (err) {
+              return null;
+            }
+          });
+          
+          const images = (await Promise.all(imagePromises)).filter(img => img && img.url);
+          setPropertyImages(images);
+          setIsLoading(false);
+          setStep(2);
+          
+        } catch (err) {
+          setError(err.message);
+          setIsLoading(false);
+        }
+      };
+
+      const handleImageSelect = (image) => {
+        setSelectedImage(image);
+        setStep(3);
+      };
+
+      const generateRenovation = async () => {
+        if (!selectedImage) return;
+        
+        setIsLoading(true);
+        setError(null);
+        setStep(4);
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/renovate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_url: selectedImage.originalUrl,
+              style: designStyle,
+              room_type: roomType,
+              time_of_day: timeOfDay,
+              colour_scheme: colourScheme,
+              flooring: flooring,
+              greenery: greenery,
+              extra_notes: extraNotes || null,
+              auto_download: autoDownload
+            })
+          });
+          
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Generation failed');
+          }
+          
+          const data = await response.json();
+          
+          const result = {
+            before: selectedImage.url,
+            after: `data:image/jpeg;base64,${data.generated_image_base64}`,
+            style: designStyle,
+            roomType: roomType
+          };
+          
+          setGeneratedResult(result);
+          
+          if (autoDownload && data.generated_image_base64) {
+            const link = document.createElement('a');
+            link.href = `data:image/jpeg;base64,${data.generated_image_base64}`;
+            link.download = `renovision-${roomType || 'room'}-${designStyle || 'styled'}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+          
+          setIsLoading(false);
+          
+        } catch (err) {
+          setError(err.message);
+          setIsLoading(false);
+        }
+      };
+
+      const resetApp = () => {
+        setStep(1);
+        setRightmoveUrl('');
+        setPropertyInfo(null);
+        setPropertyImages([]);
+        setSelectedImage(null);
+        setDesignStyle(null);
+        setRoomType(null);
+        setTimeOfDay(null);
+        setColourScheme(null);
+        setFlooring(null);
+        setGreenery(null);
+        setExtraNotes('');
+        setAutoDownload(false);
+        setGeneratedResult(null);
+        setError(null);
+      };
+
+      const goBackToSelection = () => {
+        setSelectedImage(null);
+        setDesignStyle(null);
+        setRoomType(null);
+        setTimeOfDay(null);
+        setColourScheme(null);
+        setFlooring(null);
+        setGreenery(null);
+        setExtraNotes('');
+        setError(null);
+        setStep(2);
+      };
+
+      return (
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img 
+                  src={LOGO_URL} 
+                  alt="Renovision" 
+                  className="logo-img"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              </div>
+              
+              {step > 1 && (
+                <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
+                  Start Over
+                </button>
+              )}
+            </div>
+          </header>
+
+          <main className="max-w-5xl mx-auto px-6 py-12">
+            
+            {/* Step 1: URL Input */}
+            {step === 1 && (
+              <div className="max-w-xl mx-auto text-center fade-in">
+                <h1 className="font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium">
+                  Visualise the<br /><em className="text-taupe">potential</em>
+                </h1>
+                <p className="text-linen-600 text-lg mb-10 font-light">
+                  Paste a Rightmove listing and see what your renovation could look like.
+                </p>
+                
+                <div className="card rounded-2xl p-8">
+                  <label className="block text-left text-sm font-medium mb-3 text-linen-700">
+                    Rightmove URL
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="url"
+                      value={rightmoveUrl}
+                      onChange={(e) => setRightmoveUrl(e.target.value)}
+                      placeholder="https://www.rightmove.co.uk/properties/..."
+                      className="input-field flex-1"
+                    />
+                    <button
+                      onClick={() => fetchPropertyImages(rightmoveUrl)}
+                      disabled={!rightmoveUrl || isLoading}
+                      className="btn-primary whitespace-nowrap"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center gap-2">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          Loading
+                        </span>
+                      ) : 'Fetch Property'}
+                    </button>
+                  </div>
+                  
+                  {error && (
+                    <p className="text-red-600 text-sm mt-4 text-left">{error}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Image Selection */}
+            {step === 2 && (
+              <div className="fade-in">
+                {propertyInfo && (
+                  <div className="card rounded-2xl p-6 mb-8 max-w-lg mx-auto text-center">
+                    <h2 className="font-serif text-2xl text-linen-900 mb-2">{propertyInfo.address}</h2>
+                    <div className="flex flex-wrap justify-center gap-3 text-linen-600 text-sm">
+                      <span className="font-medium text-linen-800">{propertyInfo.price}</span>
+                      {propertyInfo.bedrooms > 0 && <span>{propertyInfo.bedrooms} bed</span>}
+                      {propertyInfo.bathrooms > 0 && <span>{propertyInfo.bathrooms} bath</span>}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="text-center mb-8">
+                  <h2 className="font-serif text-3xl md:text-4xl text-linen-900 mb-2">Choose a room</h2>
+                  <p className="text-linen-600">Click any image to configure your renovation.</p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {propertyImages.map((image) => (
+                    <div
+                      key={image.id}
+                      onClick={() => handleImageSelect(image)}
+                      className="image-card rounded-xl overflow-hidden card-hover aspect-[4/3]"
+                    >
+                      <img 
+                        src={image.url} 
+                        alt="Property image"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="select-hint absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-linen-900/70 to-transparent opacity-0 transform translate-y-2 transition-all">
+                        <span className="text-linen-50 text-sm font-medium">Select</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Configure */}
+            {step === 3 && selectedImage && (
+              <div className="fade-in">
+                <button 
+                  onClick={goBackToSelection}
+                  className="flex items-center gap-2 text-linen-600 hover:text-linen-800 mb-6 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to images
+                </button>
+                
+                <div className="grid lg:grid-cols-2 gap-10">
+                  <div className="lg:sticky lg:top-24 lg:self-start">
+                    <div className="card rounded-2xl overflow-hidden">
+                      <img 
+                        src={selectedImage.url} 
+                        alt="Selected room"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h2 className="font-serif text-3xl text-linen-900 mb-2">Configure your renovation</h2>
+                    <p className="text-linen-600 mb-8">All options are optional. Leave blank for AI defaults.</p>
+                    
+                    <ToggleGroup
+                      label="Interior Design Style"
+                      options={DESIGN_STYLE_OPTIONS}
+                      value={designStyle}
+                      onChange={setDesignStyle}
+                    />
+                    
+                    <ToggleGroup
+                      label="Room Type"
+                      options={ROOM_TYPE_OPTIONS}
+                      value={roomType}
+                      onChange={setRoomType}
+                    />
+                    
+                    <ToggleGroup
+                      label="Time of Day"
+                      options={TIME_OF_DAY_OPTIONS}
+                      value={timeOfDay}
+                      onChange={setTimeOfDay}
+                    />
+                    
+                    <ToggleGroup
+                      label="Colour Scheme"
+                      options={COLOUR_SCHEME_OPTIONS}
+                      value={colourScheme}
+                      onChange={setColourScheme}
+                    />
+                    
+                    <ToggleGroup
+                      label="Flooring"
+                      options={FLOORING_OPTIONS}
+                      value={flooring}
+                      onChange={setFlooring}
+                    />
+                    
+                    <ToggleGroup
+                      label="Decorative Greenery"
+                      options={GREENERY_OPTIONS}
+                      value={greenery}
+                      onChange={setGreenery}
+                    />
+                    
+                    <div className="mb-8">
+                      <label className="block text-sm font-medium text-linen-700 mb-3">
+                        Extra Notes <span className="font-normal text-linen-500">(optional)</span>
+                      </label>
+                      <textarea
+                        value={extraNotes}
+                        onChange={(e) => setExtraNotes(e.target.value)}
+                        placeholder="E.g., 'Add a statement pendant light', 'Include built-in shelving', 'Warm brass hardware'..."
+                        className="input-field resize-none h-28"
+                      />
+                    </div>
+                    
+                    <CheckboxToggle
+                      label="Auto-download generated image"
+                      checked={autoDownload}
+                      onChange={setAutoDownload}
+                    />
+                    
+                    <div className="mt-10">
+                      <button
+                        onClick={generateRenovation}
+                        className="btn-primary w-full text-lg py-4"
+                      >
+                        Generate Renovation
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Result */}
+            {step === 4 && (
+              <div className="fade-in">
+                <div className="text-center mb-10">
+                  <h2 className="font-serif text-3xl md:text-4xl text-linen-900 mb-2">
+                    {isLoading ? (<>Creating your vision<LoadingDots /></>) : 'Your renovation'}
+                  </h2>
+                  <p className="text-linen-600">
+                    {isLoading 
+                      ? 'This usually takes around 15 seconds.' 
+                      : 'Drag the slider to compare before and after.'}
+                  </p>
+                </div>
+                
+                {isLoading ? (
+                  <div className="max-w-2xl mx-auto">
+                    <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-12 h-12 border-4 border-linen-300 border-t-linen-700 rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-linen-600">Generating<LoadingDots /></p>
+                      </div>
+                    </div>
+                  </div>
+                ) : error ? (
+                  <div className="max-w-lg mx-auto text-center">
+                    <div className="card rounded-2xl p-8">
+                      <p className="text-red-600 mb-4">{error}</p>
+                      <button onClick={goBackToSelection} className="btn-secondary">
+                        Try Again
+                      </button>
+                    </div>
+                  </div>
+                ) : generatedResult && (
+                  <div className="max-w-3xl mx-auto">
+                    <ComparisonSlider
+                      beforeSrc={generatedResult.before}
+                      afterSrc={generatedResult.after}
+                    />
+                    
+                    <ConfigSummary
+                      style={designStyle}
+                      roomType={roomType}
+                      timeOfDay={timeOfDay}
+                      colourScheme={colourScheme}
+                      flooring={flooring}
+                      greenery={greenery}
+                    />
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+                      <button
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = generatedResult.after;
+                          link.download = `renovision-${generatedResult.roomType || 'room'}-${generatedResult.style || 'styled'}.jpg`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="btn-primary"
+                      >
+                        Download Image
+                      </button>
+                      <button onClick={goBackToSelection} className="btn-secondary">
+                        Try Another Room
+                      </button>
+                      <button onClick={resetApp} className="btn-secondary">
+                        New Property
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+
+          <footer className="border-t border-linen-300/30 py-8 px-6 mt-16">
+            <div className="max-w-5xl mx-auto text-center text-sm text-linen-500">
+              <p>Powered by AI • Built for dreamers of doer-uppers</p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
