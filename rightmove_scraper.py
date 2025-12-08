@@ -392,20 +392,41 @@ async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bo
         raise ValueError(f"Could not extract property ID from URL: {url}")
 
     async with async_playwright() as p:
-        # Launch browser
-        browser = await p.chromium.launch(headless=headless)
+        # Launch browser with stealth settings to avoid detection
+        browser = await p.chromium.launch(
+            headless=headless,
+            args=[
+                '--no-sandbox',
+                '--disable-blink-features=AutomationControlled',
+                '--disable-dev-shm-usage',
+                '--disable-web-security',
+            ]
+        )
 
         try:
-            # Create new page with realistic viewport
-            page = await browser.new_page(
+            # Create context with realistic user agent
+            context = await browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                locale='en-GB',
             )
+
+            # Create new page
+            page = await context.new_page()
+
+            # Remove automation indicators
+            await page.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+            """)
 
             # Set extra headers
             await page.set_extra_http_headers({
-                'Accept-Language': 'en-GB,en;q=0.9',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Upgrade-Insecure-Requests': '1',
             })
 
             print(f"[Playwright] Navigating to: {url}")
@@ -413,18 +434,14 @@ async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bo
             # Navigate to page and wait for network to be idle
             await page.goto(url, wait_until='networkidle', timeout=timeout * 1000)
 
-            print(f"[Playwright] Page loaded, waiting for content...")
+            print(f"[Playwright] Page loaded, waiting for gallery...")
 
-            # Wait for key elements to ensure page is fully rendered
-            # Try multiple selectors as Rightmove may use different structures
+            # Wait for hydrated gallery DOM with actual images
             try:
-                await page.wait_for_selector(
-                    '[data-testid="gallery"], [class*="gallery" i], img[src*="media.rightmove"]',
-                    timeout=15000
-                )
-                print(f"[Playwright] Gallery detected")
+                await page.wait_for_selector('img[src*="media.rightmove.co.uk"]', timeout=15000)
+                print(f"[Playwright] Gallery images detected")
             except PlaywrightTimeout:
-                print(f"[Playwright] Warning: Gallery not detected, proceeding anyway")
+                print(f"[Playwright] Warning: Gallery images not detected")
 
             # Give extra time for lazy-loaded images
             await asyncio.sleep(2)
@@ -433,17 +450,72 @@ async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bo
             html = await page.content()
             print(f"[Playwright] Extracted HTML ({len(html):,} chars)")
 
-            # Try to extract PAGE_MODEL from rendered page
+            # Try to extract PAGE_MODEL first (most reliable)
             page_model = parse_page_model(html)
 
             if page_model:
                 print(f"[Playwright] PAGE_MODEL found!")
                 images = extract_images_from_page_model(page_model)
+                print(f"[Playwright] Extracted {len(images)} images from PAGE_MODEL")
             else:
+                # Fallback: Extract images directly from DOM
                 print(f"[Playwright] PAGE_MODEL not found, extracting from DOM...")
-                images = await extract_images_from_dom(page)
+                image_elements = await page.query_selector_all('img[src*="media.rightmove.co.uk"]')
 
-            print(f"[Playwright] Extracted {len(images)} images")
+                seen_urls = set()
+                images = []
+
+                for idx, elem in enumerate(image_elements):
+                    src = await elem.get_attribute('src')
+                    if not src:
+                        continue
+
+                    # Clean URL by removing query params
+                    clean_url = src.split('?')[0]
+
+                    # Skip non-property images (logos, maps, UI elements)
+                    skip_patterns = [
+                        'branch_logo',
+                        'BRANCH_PROFILE',
+                        '_generate',  # map tiles
+                        '/map/',
+                        '/assets/',
+                        'logo',
+                        'icon',
+                        'placeholder'
+                    ]
+                    if any(pattern in clean_url.lower() for pattern in skip_patterns):
+                        continue
+
+                    # Deduplicate
+                    if clean_url in seen_urls:
+                        continue
+                    seen_urls.add(clean_url)
+
+                    # Skip thumbnails
+                    if '_max_135x' in clean_url or '_max_100x' in clean_url:
+                        continue
+
+                    # Only include actual property images (IMG_XX or FLP for floorplans)
+                    if '_IMG_' not in clean_url and '_FLP_' not in clean_url:
+                        continue
+
+                    # Get alt text for room detection
+                    alt = await elem.get_attribute('alt') or ''
+
+                    # Upgrade to high resolution
+                    high_res_url = upgrade_image_resolution(clean_url)
+                    room_type = detect_room_type(alt, idx, len(image_elements))
+
+                    images.append(PropertyImage(
+                        id=len(images) + 1,
+                        url=clean_url,
+                        url_high_res=high_res_url,
+                        room_type=room_type,
+                        caption=alt
+                    ))
+
+                print(f"[Playwright] Extracted {len(images)} unique images from DOM")
 
             # Extract property details
             details = extract_property_details(page_model or {}, html)

@@ -616,19 +616,24 @@
       const fetchPropertyImages = async (url) => {
         setIsLoading(true);
         setError(null);
-        
+
         try {
           const response = await fetch(`${API_BASE_URL}/property`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
           });
-          
+
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to fetch property');
+            const errorText = await response.text();
+            try {
+              const errorData = JSON.parse(errorText);
+              throw new Error(errorData.detail || 'Failed to fetch property data — please try again.');
+            } catch (e) {
+              throw new Error('Failed to fetch property data — please try again.');
+            }
           }
-          
+
           const data = await response.json();
           
           setPropertyInfo({
@@ -643,6 +648,9 @@
             const originalUrl = img.url_high_res || img.url;
             try {
               const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+              if (!proxyResponse.ok) {
+                return null;
+              }
               const proxyData = await proxyResponse.json();
               return {
                 id: img.id,
@@ -674,11 +682,11 @@
 
       const generateRenovation = async () => {
         if (!selectedImage) return;
-        
+
         setIsLoading(true);
         setError(null);
         setStep(4);
-        
+
         try {
           const response = await fetch(`${API_BASE_URL}/renovate`, {
             method: 'POST',
@@ -695,12 +703,17 @@
               auto_download: autoDownload
             })
           });
-          
+
           if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Generation failed');
+            const errorText = await response.text();
+            try {
+              const errorData = JSON.parse(errorText);
+              throw new Error(errorData.detail || 'Generation failed — please try again.');
+            } catch (e) {
+              throw new Error('Generation failed — please try again.');
+            }
           }
-          
+
           const data = await response.json();
           
           const result = {
