@@ -3,15 +3,11 @@ services:
     name: renovation-api
     env: python
     plan: free
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && playwright install --with-deps chromium
+    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright playwright install --with-deps chromium
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     runtime:
       python:
         version: "3.12"
     envVars:
       - key: PLAYWRIGHT_BROWSERS_PATH
-        value: /opt/render/project/.cache/ms-playwright
-      - key: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
-        value: "0"
-      - key: DEBUG
-        value: "pw:api"
+        value: /opt/render/.cache/ms-playwright
