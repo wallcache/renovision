@@ -21,7 +21,6 @@ from datetime import datetime
 
 import httpx
 from PIL import Image
-from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
