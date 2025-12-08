@@ -295,16 +295,20 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
 
 async def fetch_image_as_base64(url: str) -> str:
     """Fetch an image from URL and return as base64."""
-    
+
+    # Validate URL is not empty
+    if not url or not url.strip():
+        raise HTTPException(status_code=400, detail="Image URL cannot be empty")
+
     # Clean up the URL - remove any double encoding issues
     import urllib.parse
-    
+
     # If URL doesn't start with http, it might be malformed
     if not url.startswith('http'):
         url = 'https:' + url if url.startswith('//') else 'https://' + url
-    
+
     print(f"[DEBUG] Fetching image from: {url}")
-    
+
     # Headers to look like a real browser - needed for Rightmove images
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -312,38 +316,52 @@ async def fetch_image_as_base64(url: str) -> str:
         "Accept-Language": "en-GB,en;q=0.9",
         "Referer": "https://www.rightmove.co.uk/",
     }
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             response = await client.get(url, headers=headers, follow_redirects=True)
             print(f"[DEBUG] Response status: {response.status_code}, URL: {response.url}")
-            
+
             if response.status_code != 200:
-                raise HTTPException(status_code=400, detail=f"Failed to fetch source image: {response.status_code} from {url}")
-            
-            # Optionally resize if too large
-            img = Image.open(BytesIO(response.content))
-            
+                raise HTTPException(status_code=400, detail=f"Failed to fetch source image: HTTP {response.status_code}")
+
+            # Validate we received image content
+            if not response.content or len(response.content) == 0:
+                raise HTTPException(status_code=400, detail="Received empty image data from URL")
+
+            # Try to open as image
+            try:
+                img = Image.open(BytesIO(response.content))
+            except Exception as e:
+                print(f"[ERROR] Invalid image data: {e}")
+                raise HTTPException(status_code=400, detail="URL did not return a valid image file")
+
             # Resize if larger than 2048 on any side (Gemini's recommended max)
             max_size = 2048
             if max(img.size) > max_size:
                 ratio = max_size / max(img.size)
                 new_size = tuple(int(dim * ratio) for dim in img.size)
                 img = img.resize(new_size, Image.LANCZOS)
-            
+
             # Convert to RGB if necessary (remove alpha channel)
             if img.mode in ('RGBA', 'LA', 'P'):
                 img = img.convert('RGB')
-            
+
             # Save to bytes
             buffer = BytesIO()
             img.save(buffer, format='JPEG', quality=90)
             return base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
+
+        except HTTPException:
+            raise
         except httpx.RequestError as e:
-            print(f"[DEBUG] Request error: {e}")
-            raise HTTPException(status_code=400, detail=f"Failed to fetch source image: {str(e)}")
-        return base64.b64encode(buffer.getvalue()).decode('utf-8')
+            print(f"[ERROR] Network error fetching image: {e}")
+            raise HTTPException(status_code=400, detail=f"Network error: Unable to fetch image from URL")
+        except Exception as e:
+            print(f"[ERROR] Unexpected error in fetch_image_as_base64: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Failed to process image: {str(e)}")
 
 
 async def generate_with_replicate(source_image_b64: str, prompt: str) -> str:
@@ -351,92 +369,139 @@ async def generate_with_replicate(source_image_b64: str, prompt: str) -> str:
     Generate image using Replicate's google/nano-banana model.
     """
     if not REPLICATE_API_TOKEN:
-        raise HTTPException(status_code=500, detail="REPLICATE_API_TOKEN not configured")
-    
+        raise HTTPException(status_code=500, detail="REPLICATE_API_TOKEN not configured. Please set it in your environment variables.")
+
+    # Validate inputs
+    if not source_image_b64 or not source_image_b64.strip():
+        raise HTTPException(status_code=400, detail="Source image data is empty")
+
+    if not prompt or not prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
     headers = {
         "Authorization": f"Token {REPLICATE_API_TOKEN}",
         "Content-Type": "application/json"
     }
-    
+
     # Convert our base64 source image to a temporary data URL
     image_data_url = f"data:image/jpeg;base64,{source_image_b64}"
-    
+
     async with httpx.AsyncClient(timeout=300.0) as client:
-        # Create prediction
-        response = await client.post(
-            "https://api.replicate.com/v1/predictions",
-            headers=headers,
-            json={
-                "version": "google/nano-banana",
-                "input": {
-                    "prompt": prompt,
-                    "image_input": [
-                        image_data_url
-                    ],
-                    "aspect_ratio": "match_input_image",
-                    "output_format": "jpg"
+        try:
+            # Create prediction
+            response = await client.post(
+                "https://api.replicate.com/v1/predictions",
+                headers=headers,
+                json={
+                    "version": "google/nano-banana",
+                    "input": {
+                        "prompt": prompt,
+                        "image_input": [
+                            image_data_url
+                        ],
+                        "aspect_ratio": "match_input_image",
+                        "output_format": "jpg"
+                    }
                 }
-            }
-        )
-        
-        if response.status_code != 201:
-            error_detail = response.text
-            if response.status_code == 402:
-                error_detail = "Replicate API: Payment required. Your API token may be out of credits or invalid. Please check your account at https://replicate.com/account"
-            elif response.status_code == 401:
-                error_detail = "Replicate API: Invalid or missing API token. Please check REPLICATE_API_TOKEN environment variable."
-
-            print(f"[ERROR] Replicate API failed: {response.status_code} - {response.text}")
-
-            raise HTTPException(
-                status_code=500,
-                detail=error_detail
             )
-        
-        prediction = response.json()
-        prediction_url = prediction["urls"]["get"]
-        
-        # Poll until finished
-        for _ in range(60):  # ~5 minutes max
-            await asyncio.sleep(5)
-            
-            status_response = await client.get(prediction_url, headers=headers)
-            status = status_response.json()
-            
-            if status["status"] == "succeeded":
-                output_url = status["output"]
-                
-                # Fetch the generated image
-                img_response = await client.get(output_url)
-                return base64.b64encode(img_response.content).decode("utf-8")
-            
-            elif status["status"] == "failed":
+
+            if response.status_code != 201:
+                error_detail = response.text
+                if response.status_code == 402:
+                    error_detail = "Replicate API: Payment required. Your API token may be out of credits or invalid. Please check your account at https://replicate.com/account"
+                elif response.status_code == 401:
+                    error_detail = "Replicate API: Invalid or missing API token. Please check REPLICATE_API_TOKEN environment variable."
+
+                print(f"[ERROR] Replicate API failed: {response.status_code} - {response.text}")
+
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Nano-Banana generation failed: {status.get('error', 'Unknown error')}"
+                    detail=error_detail
                 )
-        
-        raise HTTPException(
-            status_code=500,
-            detail="Nano-Banana generation timed out"
-        )
+
+            prediction = response.json()
+
+            # Validate prediction response structure
+            if "urls" not in prediction or "get" not in prediction["urls"]:
+                print(f"[ERROR] Unexpected Replicate response structure: {prediction}")
+                raise HTTPException(status_code=500, detail="Replicate API returned unexpected response format")
+
+            prediction_url = prediction["urls"]["get"]
+
+            # Poll until finished
+            for _ in range(60):  # ~5 minutes max
+                await asyncio.sleep(5)
+
+                status_response = await client.get(prediction_url, headers=headers)
+                status = status_response.json()
+
+                if status["status"] == "succeeded":
+                    output_url = status.get("output")
+
+                    if not output_url:
+                        print(f"[ERROR] Replicate succeeded but no output URL: {status}")
+                        raise HTTPException(status_code=500, detail="Replicate generation succeeded but returned no image")
+
+                    # Fetch the generated image
+                    img_response = await client.get(output_url)
+
+                    if img_response.status_code != 200 or not img_response.content:
+                        raise HTTPException(status_code=500, detail="Failed to download generated image from Replicate")
+
+                    return base64.b64encode(img_response.content).decode("utf-8")
+
+                elif status["status"] == "failed":
+                    error_msg = status.get('error', 'Unknown error')
+                    print(f"[ERROR] Replicate generation failed: {error_msg}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Nano-Banana generation failed: {error_msg}"
+                    )
+
+            print("[ERROR] Replicate generation timed out after 5 minutes")
+            raise HTTPException(
+                status_code=500,
+                detail="Nano-Banana generation timed out after 5 minutes"
+            )
+
+        except HTTPException:
+            raise
+        except httpx.RequestError as e:
+            print(f"[ERROR] Network error with Replicate API: {e}")
+            raise HTTPException(status_code=500, detail="Network error communicating with Replicate API")
+        except Exception as e:
+            print(f"[ERROR] Unexpected error in generate_with_replicate: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Unexpected error during image generation: {str(e)}")
 
 
 async def generate_with_gemini(source_image_b64: str, prompt: str) -> str:
     """Generate image using Gemini API."""
-    
+
+    # Validate inputs
+    if not source_image_b64 or not source_image_b64.strip():
+        raise HTTPException(status_code=400, detail="Source image data is empty")
+
+    if not prompt or not prompt.strip():
+        raise HTTPException(status_code=400, detail="Prompt cannot be empty")
+
     if USE_COMET_API:
+        if not COMET_API_KEY:
+            raise HTTPException(status_code=500, detail="COMET_API_KEY not configured")
         api_url = COMET_API_URL
         headers = {
             "x-goog-api-key": COMET_API_KEY,
             "Content-Type": "application/json"
         }
     else:
+        if not GEMINI_API_KEY:
+            raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured. Please set it in your environment variables.")
         api_url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
         headers = {
             "Content-Type": "application/json"
         }
-    
+
     payload = {
         "contents": [{
             "role": "user",
@@ -456,33 +521,59 @@ async def generate_with_gemini(source_image_b64: str, prompt: str) -> str:
             "responseModalities": ["IMAGE", "TEXT"]
         }
     }
-    
+
     async with httpx.AsyncClient(timeout=180.0) as client:
-        response = await client.post(api_url, json=payload, headers=headers)
-        
-        print(f"[DEBUG] Gemini response status: {response.status_code}")
-        
-        if response.status_code != 200:
-            error_detail = response.text
-            print(f"[DEBUG] Gemini error: {error_detail}")
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=f"Gemini API error: {error_detail}"
-            )
-        
-        result = response.json()
-        
-        candidates = result.get('candidates', [])
-        if not candidates:
-            raise HTTPException(status_code=500, detail="No image generated")
-        
-        parts = candidates[0].get('content', {}).get('parts', [])
-        
-        for part in parts:
-            if 'inlineData' in part:
-                return part['inlineData']['data']
-        
-        raise HTTPException(status_code=500, detail="No image in response")
+        try:
+            response = await client.post(api_url, json=payload, headers=headers)
+
+            print(f"[DEBUG] Gemini response status: {response.status_code}")
+
+            if response.status_code != 200:
+                error_detail = response.text
+                print(f"[ERROR] Gemini API error: {error_detail}")
+
+                # Provide helpful error messages for common status codes
+                if response.status_code == 401:
+                    raise HTTPException(status_code=500, detail="Gemini API: Invalid API key. Please check GEMINI_API_KEY.")
+                elif response.status_code == 403:
+                    raise HTTPException(status_code=500, detail="Gemini API: Access forbidden. Image generation may not be available in your region.")
+                elif response.status_code == 429:
+                    raise HTTPException(status_code=500, detail="Gemini API: Rate limit exceeded. Please try again later.")
+                else:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Gemini API error (HTTP {response.status_code}): {error_detail[:200]}"
+                    )
+
+            result = response.json()
+
+            candidates = result.get('candidates', [])
+            if not candidates:
+                print(f"[ERROR] Gemini returned no candidates: {result}")
+                raise HTTPException(status_code=500, detail="Gemini API returned no image candidates. The model may have filtered the request.")
+
+            parts = candidates[0].get('content', {}).get('parts', [])
+
+            for part in parts:
+                if 'inlineData' in part:
+                    image_data = part['inlineData'].get('data', '')
+                    if not image_data:
+                        raise HTTPException(status_code=500, detail="Gemini returned empty image data")
+                    return image_data
+
+            print(f"[ERROR] Gemini response has no image data: {result}")
+            raise HTTPException(status_code=500, detail="Gemini API response contained no image data")
+
+        except HTTPException:
+            raise
+        except httpx.RequestError as e:
+            print(f"[ERROR] Network error with Gemini API: {e}")
+            raise HTTPException(status_code=500, detail="Network error communicating with Gemini API")
+        except Exception as e:
+            print(f"[ERROR] Unexpected error in generate_with_gemini: {e}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"Unexpected error during image generation: {str(e)}")
 
 
 async def generate_renovation_image(request: RenovationRequest) -> str:
@@ -619,31 +710,82 @@ async def generate_renovation(request: RenovationRequest):
     Generate a renovated version of a room image.
     Returns the original URL and generated image as base64.
     Single image only - batch processing removed.
+
+    Bulletproof error handling with helpful JSON error messages.
     """
-    generated_image = await generate_renovation_image(request)
-    
-    # Build configuration summary
-    config = {}
-    if request.style:
-        config['style'] = request.style
-    if request.room_type:
-        config['room_type'] = request.room_type
-    if request.time_of_day:
-        config['time_of_day'] = request.time_of_day
-    if request.colour_scheme:
-        config['colour_scheme'] = request.colour_scheme
-    if request.flooring:
-        config['flooring'] = request.flooring
-    if request.greenery:
-        config['greenery'] = request.greenery
-    
-    return RenovationResponse(
-        original_url=request.image_url,
-        generated_image_base64=generated_image,
-        room_type=request.room_type,
-        style=request.style,
-        configuration_applied=config
-    )
+    try:
+        # 1. Validate input parameters
+        if not request.image_url or not request.image_url.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="image_url is required and cannot be empty"
+            )
+
+        # 2. Check environment variables based on provider
+        if IMAGE_PROVIDER == "replicate":
+            if not REPLICATE_API_TOKEN:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Server configuration error: REPLICATE_API_TOKEN not set. Please contact support or configure environment variables."
+                )
+        elif IMAGE_PROVIDER == "gemini":
+            if not GEMINI_API_KEY and not COMET_API_KEY:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Server configuration error: GEMINI_API_KEY not set. Please contact support or configure environment variables."
+                )
+
+        print(f"[INFO] Starting renovation for image: {request.image_url[:100]}...")
+        print(f"[INFO] Configuration - style: {request.style}, room: {request.room_type}, time: {request.time_of_day}")
+
+        # 3. Generate the image (with nested error handling in called functions)
+        generated_image = await generate_renovation_image(request)
+
+        # 4. Validate the generated image is not empty
+        if not generated_image or not generated_image.strip():
+            print("[ERROR] Generated image data is empty")
+            raise HTTPException(
+                status_code=500,
+                detail="Image generation completed but returned empty data. Please try again."
+            )
+
+        # 5. Build configuration summary
+        config = {}
+        if request.style:
+            config['style'] = request.style
+        if request.room_type:
+            config['room_type'] = request.room_type
+        if request.time_of_day:
+            config['time_of_day'] = request.time_of_day
+        if request.colour_scheme:
+            config['colour_scheme'] = request.colour_scheme
+        if request.flooring:
+            config['flooring'] = request.flooring
+
+        print(f"[SUCCESS] Image renovation completed successfully")
+
+        return RenovationResponse(
+            original_url=request.image_url,
+            generated_image_base64=generated_image,
+            room_type=request.room_type,
+            style=request.style,
+            configuration_applied=config
+        )
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (already have proper error messages)
+        raise
+
+    except Exception as e:
+        # Catch any unexpected errors and return helpful message
+        print(f"[ERROR] Unexpected error in /renovate endpoint: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected server error: {str(e)}. Please try again or contact support if the issue persists."
+        )
 
 
 # Health check endpoint
