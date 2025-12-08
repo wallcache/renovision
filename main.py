@@ -390,9 +390,17 @@ async def generate_with_replicate(source_image_b64: str, prompt: str) -> str:
         )
         
         if response.status_code != 201:
+            error_detail = response.text
+            if response.status_code == 402:
+                error_detail = "Replicate API: Payment required. Your API token may be out of credits or invalid. Please check your account at https://replicate.com/account"
+            elif response.status_code == 401:
+                error_detail = "Replicate API: Invalid or missing API token. Please check REPLICATE_API_TOKEN environment variable."
+
+            print(f"[ERROR] Replicate API failed: {response.status_code} - {response.text}")
+
             raise HTTPException(
-                status_code=response.status_code,
-                detail=f"Replicate API error: {response.text}"
+                status_code=500,
+                detail=error_detail
             )
         
         prediction = response.json()
@@ -651,7 +659,13 @@ async def generate_renovation(request: RenovationRequest):
 # Health check endpoint
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "provider": IMAGE_PROVIDER}
+    return {
+        "status": "healthy",
+        "provider": IMAGE_PROVIDER,
+        "replicate_configured": bool(REPLICATE_API_TOKEN),
+        "gemini_configured": bool(GEMINI_API_KEY),
+        "note": "402 errors indicate API payment/credits issue"
+    }
 
 from fastapi.staticfiles import StaticFiles
 
