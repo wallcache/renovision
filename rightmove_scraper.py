@@ -24,7 +24,14 @@ from typing import Optional
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
-from playwright.async_api import async_playwright, Page, Browser, TimeoutError as PlaywrightTimeout
+try:
+    from playwright.async_api import async_playwright, Page, Browser, TimeoutError as PlaywrightTimeout
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    print("[WARNING] Playwright not available, will use httpx fallback")
+
+import httpx
 
 
 @dataclass
@@ -366,9 +373,69 @@ def extract_property_details(data: dict, page_content: str) -> dict:
     return details
 
 
+async def scrape_with_httpx_fallback(url: str, timeout: float = 30.0) -> PropertyListing:
+    """
+    Fallback scraper using httpx when Playwright is not available.
+    Less reliable but works on resource-constrained environments.
+    """
+    parsed = urlparse(url)
+    if 'rightmove.co.uk' not in parsed.netloc:
+        raise ValueError(f"Not a Rightmove URL: {url}")
+
+    property_id = extract_property_id(url)
+    if not property_id:
+        raise ValueError(f"Could not extract property ID from URL: {url}")
+
+    print(f"[httpx] Fetching {url} (Playwright fallback)")
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-GB,en;q=0.9",
+    }
+
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+        response = await client.get(url, headers=headers)
+        response.raise_for_status()
+
+        html = response.text
+        print(f"[httpx] Fetched HTML ({len(html):,} chars)")
+
+        # Try to extract PAGE_MODEL
+        page_model = parse_page_model(html)
+
+        if page_model:
+            print(f"[httpx] PAGE_MODEL found!")
+            images = extract_images_from_page_model(page_model)
+            details = extract_property_details(page_model, html)
+        else:
+            print(f"[httpx] PAGE_MODEL not found, limited data available")
+            images = []
+            details = extract_property_details({}, html)
+
+        return PropertyListing(
+            url=url,
+            property_id=property_id,
+            address=details['address'],
+            price=details['price'],
+            price_qualifier=details['price_qualifier'],
+            property_type=details['property_type'],
+            bedrooms=details['bedrooms'],
+            bathrooms=details['bathrooms'],
+            images=images,
+            floorplan_urls=details['floorplan_urls'],
+            agent_name=details['agent_name'],
+            agent_phone=details['agent_phone'],
+            description=details['description'],
+            features=details['features']
+        )
+
+
 async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bool = True) -> PropertyListing:
     """
-    Scrape a Rightmove property listing using Playwright.
+    Scrape a Rightmove property listing.
+
+    Tries Playwright first for best results, falls back to httpx if unavailable.
 
     Args:
         url: Full Rightmove property URL
@@ -382,6 +449,21 @@ async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bo
         ValueError: If URL is invalid
         Exception: If scraping fails
     """
+    # Use httpx fallback if Playwright is not available
+    if not PLAYWRIGHT_AVAILABLE:
+        print("[INFO] Using httpx fallback (Playwright not available)")
+        return await scrape_with_httpx_fallback(url, timeout=30.0)
+
+    # Try Playwright, fallback to httpx on failure
+    try:
+        return await _scrape_with_playwright(url, timeout, headless)
+    except Exception as e:
+        print(f"[WARNING] Playwright failed ({str(e)}), trying httpx fallback...")
+        return await scrape_with_httpx_fallback(url, timeout=30.0)
+
+
+async def _scrape_with_playwright(url: str, timeout: float = 60.0, headless: bool = True) -> PropertyListing:
+    """Internal Playwright scraper."""
     # Validate URL
     parsed = urlparse(url)
     if 'rightmove.co.uk' not in parsed.netloc:
