@@ -37,7 +37,7 @@ load_dotenv()
 # CONFIGURATION
 # ============================================
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("REPLICATE_API_TOKEN")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
 
 # Image generation provider: "gemini" or "replicate"
