@@ -658,7 +658,33 @@
       const [timeOfDay, setTimeOfDay] = useState(null);
       const [colourScheme, setColourScheme] = useState(null);
       const [flooring, setFlooring] = useState(null);
-      const [activeToggleId, setActiveToggleId] = useState(null);
+      const [activeToggleId, setActiveToggleId] = useState('style');
+
+      // Auto-advance to next toggle when a selection is made
+      const handleStyleChange = (value) => {
+        setDesignStyle(value);
+        if (value) setActiveToggleId('room');
+      };
+
+      const handleRoomChange = (value) => {
+        setRoomType(value);
+        if (value) setActiveToggleId('time');
+      };
+
+      const handleTimeChange = (value) => {
+        setTimeOfDay(value);
+        if (value) setActiveToggleId('colour');
+      };
+
+      const handleColourChange = (value) => {
+        setColourScheme(value);
+        if (value) setActiveToggleId('floor');
+      };
+
+      const handleFloorChange = (value) => {
+        setFlooring(value);
+        if (value) setActiveToggleId(null);
+      };
       const [extraNotes, setExtraNotes] = useState('');
       const [autoDownload, setAutoDownload] = useState(false);
       
@@ -728,6 +754,7 @@
 
       const handleImageSelect = (image) => {
         setSelectedImage(image);
+        setActiveToggleId('style'); // Start with Style open
         setStep(3);
       };
 
@@ -970,7 +997,7 @@
                       label="Style"
                       options={DESIGN_STYLE_OPTIONS}
                       value={designStyle}
-                      onChange={setDesignStyle}
+                      onChange={handleStyleChange}
                       isCollapsible={true}
                       isOpen={activeToggleId === 'style'}
                       onToggle={() => setActiveToggleId(activeToggleId === 'style' ? null : 'style')}
@@ -980,7 +1007,7 @@
                       label="Room"
                       options={ROOM_TYPE_OPTIONS}
                       value={roomType}
-                      onChange={setRoomType}
+                      onChange={handleRoomChange}
                       isCollapsible={true}
                       isOpen={activeToggleId === 'room'}
                       onToggle={() => setActiveToggleId(activeToggleId === 'room' ? null : 'room')}
@@ -990,7 +1017,7 @@
                       label="Time of Day"
                       options={TIME_OF_DAY_OPTIONS}
                       value={timeOfDay}
-                      onChange={setTimeOfDay}
+                      onChange={handleTimeChange}
                       isCollapsible={true}
                       isOpen={activeToggleId === 'time'}
                       onToggle={() => setActiveToggleId(activeToggleId === 'time' ? null : 'time')}
@@ -1000,7 +1027,7 @@
                       label="Colour Scheme"
                       options={COLOUR_SCHEME_OPTIONS}
                       value={colourScheme}
-                      onChange={setColourScheme}
+                      onChange={handleColourChange}
                       isCollapsible={true}
                       isOpen={activeToggleId === 'colour'}
                       onToggle={() => setActiveToggleId(activeToggleId === 'colour' ? null : 'colour')}
@@ -1011,7 +1038,7 @@
                       label="Floor"
                       options={FLOORING_OPTIONS}
                       value={flooring}
-                      onChange={setFlooring}
+                      onChange={handleFloorChange}
                       isCollapsible={true}
                       isOpen={activeToggleId === 'floor'}
                       onToggle={() => setActiveToggleId(activeToggleId === 'floor' ? null : 'floor')}
