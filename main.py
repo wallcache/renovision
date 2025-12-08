@@ -155,10 +155,12 @@ async def get_property_from_rightmove(url: str) -> PropertyResponse:
         
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"Rightmove returned error: {e.response.status_code}")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Failed to connect to Rightmove: {str(e)}")
+    except Exception as e:
+        # Log the full error for debugging
+        import traceback
+        print(f"[ERROR] Scraper failed: {type(e).__name__}: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to scrape property: {str(e)}")
 
 # ============================================
 # GEMINI IMAGE GENERATION

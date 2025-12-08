@@ -393,15 +393,22 @@ async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bo
 
     async with async_playwright() as p:
         # Launch browser with stealth settings to avoid detection
-        browser = await p.chromium.launch(
-            headless=headless,
-            args=[
-                '--no-sandbox',
-                '--disable-blink-features=AutomationControlled',
-                '--disable-dev-shm-usage',
-                '--disable-web-security',
-            ]
-        )
+        try:
+            browser = await p.chromium.launch(
+                headless=headless,
+                args=[
+                    '--no-sandbox',
+                    '--disable-blink-features=AutomationControlled',
+                    '--disable-dev-shm-usage',
+                    '--disable-web-security',
+                    '--disable-gpu',
+                    '--disable-software-rasterizer',
+                    '--disable-extensions',
+                    '--single-process',  # Helps with memory on limited resources
+                ]
+            )
+        except Exception as e:
+            raise Exception(f"Failed to launch browser: {str(e)}. Playwright may not be installed correctly.")
 
         try:
             # Create context with realistic user agent
