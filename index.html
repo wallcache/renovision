@@ -534,19 +534,18 @@
     }
 
     // Configuration summary for results page
-    function ConfigSummary({ style, roomType, timeOfDay, colourScheme, flooring, greenery }) {
+    function ConfigSummary({ style, roomType, timeOfDay, colourScheme, flooring }) {
       const getLabelForId = (options, id) => {
         const option = options.find(o => o.id === id);
         return option ? option.label : null;
       };
-      
+
       const items = [
         { label: 'Style', value: getLabelForId(DESIGN_STYLE_OPTIONS, style) },
         { label: 'Room', value: getLabelForId(ROOM_TYPE_OPTIONS, roomType) },
         { label: 'Lighting', value: getLabelForId(TIME_OF_DAY_OPTIONS, timeOfDay) },
         { label: 'Colours', value: getLabelForId(COLOUR_SCHEME_OPTIONS, colourScheme) },
         { label: 'Flooring', value: getLabelForId(FLOORING_OPTIONS, flooring) },
-        { label: 'Greenery', value: getLabelForId(GREENERY_OPTIONS, greenery) },
       ].filter(item => item.value);
       
       if (items.length === 0) return null;
@@ -725,10 +724,19 @@
             const originalUrl = img.url_high_res || img.url;
             try {
               const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+
               if (!proxyResponse.ok) {
+                console.warn(`Failed to proxy image ${img.id}: HTTP ${proxyResponse.status}`);
+                return null; // Skip failed images gracefully
+              }
+
+              const proxyData = await proxyResponse.json();
+
+              if (!proxyData.data_url) {
+                console.warn(`No data_url returned for image ${img.id}`);
                 return null;
               }
-              const proxyData = await proxyResponse.json();
+
               return {
                 id: img.id,
                 url: proxyData.data_url,
@@ -737,11 +745,17 @@
                 caption: img.caption || ''
               };
             } catch (err) {
-              return null;
+              console.error(`Error fetching image ${img.id}:`, err);
+              return null; // Skip failed images instead of crashing
             }
           });
-          
+
           const images = (await Promise.all(imagePromises)).filter(img => img && img.url);
+
+          if (images.length === 0) {
+            throw new Error('No images could be loaded. The property images may be unavailable or the proxy server may be experiencing issues.');
+          }
+
           setPropertyImages(images);
           setIsLoading(false);
           setStep(2);
@@ -830,7 +844,6 @@
         setTimeOfDay(null);
         setColourScheme(null);
         setFlooring(null);
-        setGreenery(null);
         setExtraNotes('');
         setAutoDownload(false);
         setGeneratedResult(null);
@@ -844,7 +857,6 @@
         setTimeOfDay(null);
         setColourScheme(null);
         setFlooring(null);
-        setGreenery(null);
         setExtraNotes('');
         setError(null);
         setStep(2);
@@ -1120,7 +1132,6 @@
                       timeOfDay={timeOfDay}
                       colourScheme={colourScheme}
                       flooring={flooring}
-                      greenery={greenery}
                     />
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
