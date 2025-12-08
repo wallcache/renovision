@@ -3,7 +3,14 @@ services:
     name: renovation-api
     env: python
     plan: free
-    buildCommand: pip install --upgrade pip setuptools wheel && pip install -r requirements.txt && PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright playwright install --with-deps chromium
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+      echo "Installing Playwright browsers..."
+      export PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright
+      python -m playwright install --with-deps chromium
+      echo "Playwright installation complete"
+      ls -la /opt/render/.cache/ms-playwright/ || echo "Browser cache directory not found"
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     runtime:
       python:
