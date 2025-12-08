@@ -1,14 +1,18 @@
 """
-Rightmove Property Scraper
-==========================
-Production-ready scraper for extracting property images from Rightmove listings.
+Rightmove Property Scraper - Playwright Edition
+================================================
+Production-ready scraper using headless Chromium to handle client-side rendering.
 
-Rightmove embeds property data in a JavaScript variable called PAGE_MODEL.
-This module extracts that data and parses out the high-resolution images.
+Rightmove renders content dynamically, so we use Playwright to:
+1. Launch headless browser
+2. Navigate to property page
+3. Wait for gallery to fully load
+4. Extract PAGE_MODEL from rendered page
+5. Parse high-resolution images and metadata
 
 Usage:
     from rightmove_scraper import scrape_rightmove_listing
-    
+
     result = await scrape_rightmove_listing("https://www.rightmove.co.uk/properties/123456789")
     print(result.images)
 """
@@ -20,8 +24,7 @@ from typing import Optional
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
-import httpx
-from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright, Page, Browser, TimeoutError as PlaywrightTimeout
 
 
 @dataclass
@@ -36,7 +39,7 @@ class PropertyImage:
     height: Optional[int] = None
 
 
-@dataclass 
+@dataclass
 class PropertyListing:
     """Complete property listing data."""
     url: str
@@ -80,7 +83,7 @@ def detect_room_type(caption: str, index: int, total_images: int) -> str:
     Falls back to smart defaults if caption is just a filename.
     """
     caption_lower = caption.lower()
-    
+
     # Check if caption is actually descriptive (not just a filename)
     is_filename = (
         caption_lower.startswith('_dsc') or
@@ -91,22 +94,19 @@ def detect_room_type(caption: str, index: int, total_images: int) -> str:
         caption_lower.endswith('.jpeg') or
         caption_lower.endswith('.png') or
         len(caption) < 4 or
-        caption_lower == 'font'  # Rightmove sometimes uses this for hero images
+        caption_lower == 'font'
     )
-    
+
     # If it's a real caption, try to match room types
     if not is_filename:
         for room_type, keywords in ROOM_KEYWORDS.items():
             if any(kw in caption_lower for kw in keywords):
                 return room_type
-    
+
     # Smart defaults based on typical Rightmove photo ordering
-    # First image is usually exterior/hero shot
     if index == 0:
         return "Exterior"
-    
-    # Try to provide useful defaults based on position
-    # Most listings follow: exterior, reception rooms, kitchen, bedrooms, bathroom, garden
+
     if total_images >= 10:
         if index <= 2:
             return "Reception Room"
@@ -118,83 +118,76 @@ def detect_room_type(caption: str, index: int, total_images: int) -> str:
             return "Bathroom"
         else:
             return "Garden / Other"
-    
+
     return f"Photo {index + 1}"
 
 
 def extract_property_id(url: str) -> str:
     """Extract property ID from Rightmove URL."""
-    # URLs look like: https://www.rightmove.co.uk/properties/154372299
-    # or: https://www.rightmove.co.uk/property-for-sale/property-154372299.html
-    
     match = re.search(r'/propert(?:y|ies)[/-](\d+)', url)
     if match:
         return match.group(1)
-    
+
     match = re.search(r'propertyId=(\d+)', url)
     if match:
         return match.group(1)
-    
+
     return ""
 
 
 def upgrade_image_resolution(url: str) -> str:
     """
-    Clean up Rightmove image URL.
-    
-    Rightmove's PAGE_MODEL sometimes returns URLs with _max_ in wrong places.
-    We strip it out entirely and use the base URL which gives full resolution.
+    Upgrade Rightmove image URL to highest resolution.
+    Strip crop and _max_ parameters to get full resolution.
     """
     # Remove crop parameters
     url = re.sub(r'/crop/\d+x\d+/', '/', url)
-    
-    # Remove _max_ parameter entirely - the base URL gives full resolution
+
+    # Remove _max_ parameter entirely - base URL gives full resolution
     url = re.sub(r'/_max_\d+x\d+/', '/', url)
-    
+
     return url
 
 
 def parse_page_model(html: str) -> Optional[dict]:
     """
     Extract and parse the PAGE_MODEL JavaScript object from HTML.
-    
+
     Rightmove embeds property data like:
     window.PAGE_MODEL = {"propertyData": {...}, ...}
-    
+
     Uses brace counting instead of regex since the JSON can be 500KB+.
     """
-    # Find the start of PAGE_MODEL
     marker = 'window.PAGE_MODEL = '
     start_idx = html.find(marker)
-    
+
     if start_idx == -1:
         return None
-    
-    # Move past the marker
+
     json_start = start_idx + len(marker)
-    
+
     # Count braces to find the complete JSON object
     brace_count = 0
     in_string = False
     escape_next = False
     json_end = json_start
-    
+
     for i, char in enumerate(html[json_start:], start=json_start):
         if escape_next:
             escape_next = False
             continue
-            
+
         if char == '\\':
             escape_next = True
             continue
-            
+
         if char == '"' and not escape_next:
             in_string = not in_string
             continue
-            
+
         if in_string:
             continue
-            
+
         if char == '{':
             brace_count += 1
         elif char == '}':
@@ -202,12 +195,12 @@ def parse_page_model(html: str) -> Optional[dict]:
             if brace_count == 0:
                 json_end = i + 1
                 break
-    
+
     if brace_count != 0:
         return None
-    
+
     json_str = html[json_start:json_end]
-    
+
     try:
         return json.loads(json_str)
     except json.JSONDecodeError:
@@ -217,14 +210,12 @@ def parse_page_model(html: str) -> Optional[dict]:
 def extract_images_from_page_model(data: dict) -> list[PropertyImage]:
     """Extract images from parsed PAGE_MODEL data."""
     images = []
-    
-    # Navigate to images array - structure varies slightly
+
     property_data = data.get('propertyData', data)
     image_list = property_data.get('images', [])
     total_images = len(image_list)
-    
+
     for idx, img in enumerate(image_list):
-        # Handle different image object structures
         if isinstance(img, dict):
             url = img.get('url') or img.get('srcUrl') or img.get('src', '')
             caption = img.get('caption', '') or img.get('alt', '')
@@ -236,19 +227,19 @@ def extract_images_from_page_model(data: dict) -> list[PropertyImage]:
             width = height = None
         else:
             continue
-        
+
         if not url:
             continue
-        
+
         # Ensure full URL
         if url.startswith('//'):
             url = 'https:' + url
         elif url.startswith('/'):
             url = 'https://media.rightmove.co.uk' + url
-        
+
         high_res_url = upgrade_image_resolution(url)
         room_type = detect_room_type(caption, idx, total_images)
-        
+
         images.append(PropertyImage(
             id=idx + 1,
             url=url,
@@ -258,61 +249,67 @@ def extract_images_from_page_model(data: dict) -> list[PropertyImage]:
             width=width,
             height=height
         ))
-    
+
     return images
 
 
-def extract_images_from_html(soup: BeautifulSoup, html: str) -> list[PropertyImage]:
+async def extract_images_from_dom(page: Page) -> list[PropertyImage]:
     """
-    Fallback: Extract images directly from HTML when PAGE_MODEL isn't available.
+    Fallback: Extract images directly from DOM if PAGE_MODEL is unavailable.
+    Waits for gallery to load and extracts high-res image URLs.
     """
     images = []
+
+    # Wait for gallery to be present
+    try:
+        await page.wait_for_selector('[data-testid="gallery"], [class*="gallery" i], img[src*="media.rightmove"]', timeout=10000)
+    except PlaywrightTimeout:
+        print("[WARNING] Gallery selector not found, proceeding anyway")
+
+    # Extract all image URLs from the page
+    image_elements = await page.query_selector_all('img')
+
     seen_urls = set()
-    
-    # Pattern 1: Find all Rightmove media URLs in the HTML
-    url_pattern = r'https?://media\.rightmove\.co\.uk[^"\'>\s\\]+\.(?:jpg|jpeg|png|webp)'
-    urls = re.findall(url_pattern, html, re.IGNORECASE)
-    
-    for idx, url in enumerate(urls):
-        # Clean URL (remove escape characters)
-        url = url.replace('\\u002F', '/').replace('\\/', '/')
-        
-        # Skip thumbnails and duplicates
-        if url in seen_urls:
+
+    for elem in image_elements:
+        src = await elem.get_attribute('src')
+        alt = await elem.get_attribute('alt') or ''
+
+        if not src:
             continue
-        if '_max_135x' in url or '_max_100x' in url:
+
+        # Only include Rightmove media URLs
+        if 'media.rightmove' not in src.lower():
             continue
-        
-        seen_urls.add(url)
-        high_res_url = upgrade_image_resolution(url)
-        
+
+        # Skip thumbnails
+        if '_max_135x' in src or '_max_100x' in src:
+            continue
+
+        if src in seen_urls:
+            continue
+
+        seen_urls.add(src)
+
+        # Ensure full URL
+        if src.startswith('//'):
+            src = 'https:' + src
+
+        high_res_url = upgrade_image_resolution(src)
+
         images.append(PropertyImage(
             id=len(images) + 1,
-            url=url,
+            url=src,
             url_high_res=high_res_url,
             room_type=f"Photo {len(images) + 1}",
-            caption=""
+            caption=alt
         ))
-    
-    # Pattern 2: Look for gallery images in specific elements
-    gallery_imgs = soup.select('[data-testid*="gallery"] img, [class*="gallery"] img, [class*="Gallery"] img')
-    for img in gallery_imgs:
-        src = img.get('src') or img.get('data-src', '')
-        if src and 'rightmove' in src.lower() and src not in seen_urls:
-            seen_urls.add(src)
-            images.append(PropertyImage(
-                id=len(images) + 1,
-                url=src,
-                url_high_res=upgrade_image_resolution(src),
-                room_type=f"Photo {len(images) + 1}",
-                caption=img.get('alt', '')
-            ))
-    
+
     return images
 
 
-def extract_property_details(data: dict, soup: BeautifulSoup) -> dict:
-    """Extract property metadata from PAGE_MODEL or HTML."""
+def extract_property_details(data: dict, page_content: str) -> dict:
+    """Extract property metadata from PAGE_MODEL."""
     details = {
         'address': '',
         'price': '',
@@ -326,171 +323,150 @@ def extract_property_details(data: dict, soup: BeautifulSoup) -> dict:
         'features': [],
         'floorplan_urls': []
     }
-    
-    if data:
-        prop = data.get('propertyData', data)
-        
-        # Address
-        addr = prop.get('address', {})
-        if isinstance(addr, dict):
-            details['address'] = addr.get('displayAddress', '')
-        elif isinstance(addr, str):
-            details['address'] = addr
-        
-        # Price
-        prices = prop.get('prices', {})
-        if isinstance(prices, dict):
-            details['price'] = prices.get('primaryPrice', '')
-            details['price_qualifier'] = prices.get('priceQualifier', '')
-        
-        # Property info
-        details['property_type'] = prop.get('propertySubType', '') or prop.get('propertyType', '')
-        details['bedrooms'] = prop.get('bedrooms', 0) or 0
-        details['bathrooms'] = prop.get('bathrooms', 0) or 0
-        
-        # Agent
-        agent = prop.get('customer', {}) or prop.get('agent', {})
-        if isinstance(agent, dict):
-            details['agent_name'] = agent.get('branchDisplayName', '') or agent.get('name', '')
-            details['agent_phone'] = agent.get('contactTelephone', '') or agent.get('phone', '')
-        
-        # Description
-        details['description'] = prop.get('text', {}).get('description', '') if isinstance(prop.get('text'), dict) else ''
-        
-        # Features
-        details['features'] = prop.get('keyFeatures', []) or []
-        
-        # Floorplans
-        floorplans = prop.get('floorplans', [])
-        details['floorplan_urls'] = [fp.get('url', '') for fp in floorplans if isinstance(fp, dict) and fp.get('url')]
-    
-    # Fallback to HTML parsing
-    if not details['address']:
-        title = soup.find('meta', property='og:title')
-        if title:
-            details['address'] = title.get('content', '').split(' | ')[0]
-    
-    if not details['price']:
-        price_elem = soup.select_one('[data-testid="price"], [class*="price" i]')
-        if price_elem:
-            details['price'] = price_elem.get_text(strip=True)
-    
+
+    if not data:
+        return details
+
+    prop = data.get('propertyData', data)
+
+    # Address
+    addr = prop.get('address', {})
+    if isinstance(addr, dict):
+        details['address'] = addr.get('displayAddress', '')
+    elif isinstance(addr, str):
+        details['address'] = addr
+
+    # Price
+    prices = prop.get('prices', {})
+    if isinstance(prices, dict):
+        details['price'] = prices.get('primaryPrice', '')
+        details['price_qualifier'] = prices.get('priceQualifier', '')
+
+    # Property info
+    details['property_type'] = prop.get('propertySubType', '') or prop.get('propertyType', '')
+    details['bedrooms'] = prop.get('bedrooms', 0) or 0
+    details['bathrooms'] = prop.get('bathrooms', 0) or 0
+
+    # Agent
+    agent = prop.get('customer', {}) or prop.get('agent', {})
+    if isinstance(agent, dict):
+        details['agent_name'] = agent.get('branchDisplayName', '') or agent.get('name', '')
+        details['agent_phone'] = agent.get('contactTelephone', '') or agent.get('phone', '')
+
+    # Description
+    details['description'] = prop.get('text', {}).get('description', '') if isinstance(prop.get('text'), dict) else ''
+
+    # Features
+    details['features'] = prop.get('keyFeatures', []) or []
+
+    # Floorplans
+    floorplans = prop.get('floorplans', [])
+    details['floorplan_urls'] = [fp.get('url', '') for fp in floorplans if isinstance(fp, dict) and fp.get('url')]
+
     return details
 
 
-
-
-async def scrape_rightmove_listing(url: str, timeout: float = 30.0) -> PropertyListing:
+async def scrape_rightmove_listing(url: str, timeout: float = 60.0, headless: bool = True) -> PropertyListing:
     """
-    Scrape a Rightmove property listing.
-    
+    Scrape a Rightmove property listing using Playwright.
+
     Args:
         url: Full Rightmove property URL
         timeout: Request timeout in seconds
-    
+        headless: Run browser in headless mode (default: True)
+
     Returns:
         PropertyListing with images and metadata
-    
+
     Raises:
         ValueError: If URL is invalid
-        httpx.HTTPError: If request fails
+        Exception: If scraping fails
     """
     # Validate URL
     parsed = urlparse(url)
     if 'rightmove.co.uk' not in parsed.netloc:
         raise ValueError(f"Not a Rightmove URL: {url}")
-    
+
     property_id = extract_property_id(url)
     if not property_id:
         raise ValueError(f"Could not extract property ID from URL: {url}")
-    
-    # Request headers to look like a real browser
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-        "Accept-Language": "en-GB,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"macOS"',
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-    }
-    
-    async with httpx.AsyncClient(
-        timeout=timeout,
-        follow_redirects=True
-    ) as client:
-        response = await client.get(url, headers=headers)
-        response.raise_for_status()
-        
-        html = response.text
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        # Try to get structured data from PAGE_MODEL
-        page_model = parse_page_model(html)
-        
-        # Extract images
-        if page_model:
-            images = extract_images_from_page_model(page_model)
-        else:
-            images = extract_images_from_html(soup, html)
-        
-        # Extract property details
-        details = extract_property_details(page_model or {}, soup)
-        
-        return PropertyListing(
-            url=str(response.url),
-            property_id=property_id,
-            address=details['address'],
-            price=details['price'],
-            price_qualifier=details['price_qualifier'],
-            property_type=details['property_type'],
-            bedrooms=details['bedrooms'],
-            bathrooms=details['bathrooms'],
-            images=images,
-            floorplan_urls=details['floorplan_urls'],
-            agent_name=details['agent_name'],
-            agent_phone=details['agent_phone'],
-            description=details['description'],
-            features=details['features']
-        )
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+    async with async_playwright() as p:
+        # Launch browser
+        browser = await p.chromium.launch(headless=headless)
 
-app = FastAPI()
+        try:
+            # Create new page with realistic viewport
+            page = await browser.new_page(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
 
-class PropertyRequest(BaseModel):
-    url: str
+            # Set extra headers
+            await page.set_extra_http_headers({
+                'Accept-Language': 'en-GB,en;q=0.9',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            })
 
-@app.post("/property")
-async def get_property(req: PropertyRequest):
-    try:
-        listing = await scrape_rightmove_listing(req.url)
-        # Convert PropertyImage dataclass to dicts
-        images = [img.__dict__ for img in listing.images]
-        return {
-            "url": listing.url,
-            "property_id": listing.property_id,
-            "address": listing.address,
-            "price": listing.price,
-            "property_type": listing.property_type,
-            "bedrooms": listing.bedrooms,
-            "bathrooms": listing.bathrooms,
-            "images": images,
-            "floorplan_urls": listing.floorplan_urls,
-            "agent_name": listing.agent_name,
-            "description": listing.description,
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            print(f"[Playwright] Navigating to: {url}")
 
+            # Navigate to page and wait for network to be idle
+            await page.goto(url, wait_until='networkidle', timeout=timeout * 1000)
+
+            print(f"[Playwright] Page loaded, waiting for content...")
+
+            # Wait for key elements to ensure page is fully rendered
+            # Try multiple selectors as Rightmove may use different structures
+            try:
+                await page.wait_for_selector(
+                    '[data-testid="gallery"], [class*="gallery" i], img[src*="media.rightmove"]',
+                    timeout=15000
+                )
+                print(f"[Playwright] Gallery detected")
+            except PlaywrightTimeout:
+                print(f"[Playwright] Warning: Gallery not detected, proceeding anyway")
+
+            # Give extra time for lazy-loaded images
+            await asyncio.sleep(2)
+
+            # Get page content
+            html = await page.content()
+            print(f"[Playwright] Extracted HTML ({len(html):,} chars)")
+
+            # Try to extract PAGE_MODEL from rendered page
+            page_model = parse_page_model(html)
+
+            if page_model:
+                print(f"[Playwright] PAGE_MODEL found!")
+                images = extract_images_from_page_model(page_model)
+            else:
+                print(f"[Playwright] PAGE_MODEL not found, extracting from DOM...")
+                images = await extract_images_from_dom(page)
+
+            print(f"[Playwright] Extracted {len(images)} images")
+
+            # Extract property details
+            details = extract_property_details(page_model or {}, html)
+
+            return PropertyListing(
+                url=url,
+                property_id=property_id,
+                address=details['address'],
+                price=details['price'],
+                price_qualifier=details['price_qualifier'],
+                property_type=details['property_type'],
+                bedrooms=details['bedrooms'],
+                bathrooms=details['bathrooms'],
+                images=images,
+                floorplan_urls=details['floorplan_urls'],
+                agent_name=details['agent_name'],
+                agent_phone=details['agent_phone'],
+                description=details['description'],
+                features=details['features']
+            )
+
+        finally:
+            await browser.close()
 
 
 # ============================================
@@ -499,19 +475,22 @@ async def get_property(req: PropertyRequest):
 
 if __name__ == "__main__":
     import sys
-    
+
     async def main():
         if len(sys.argv) < 2:
             print("Usage: python rightmove_scraper.py <rightmove_url>")
             print("Example: python rightmove_scraper.py https://www.rightmove.co.uk/properties/154372299")
             sys.exit(1)
-        
+
         url = sys.argv[1]
         print(f"Scraping: {url}\n")
-        
+
         try:
-            listing = await scrape_rightmove_listing(url)
-            
+            listing = await scrape_rightmove_listing(url, headless=False)
+
+            print(f"\n{'='*60}")
+            print(f"RESULTS")
+            print(f"{'='*60}")
             print(f"Address: {listing.address}")
             print(f"Price: {listing.price}")
             print(f"Property ID: {listing.property_id}")
@@ -520,22 +499,30 @@ if __name__ == "__main__":
             print(f"Bathrooms: {listing.bathrooms}")
             print(f"Agent: {listing.agent_name}")
             print(f"\nImages ({len(listing.images)}):")
-            
+
             for img in listing.images:
                 print(f"  [{img.id}] {img.room_type}: {img.url_high_res[:80]}...")
-            
+
             if listing.floorplan_urls:
                 print(f"\nFloorplans ({len(listing.floorplan_urls)}):")
                 for fp in listing.floorplan_urls:
                     print(f"  {fp}")
-            
+
             if listing.features:
                 print(f"\nFeatures:")
                 for feat in listing.features[:5]:
                     print(f"  - {feat}")
-        
+
+            print(f"\n{'='*60}")
+            print(f"✅ SCRAPING SUCCESSFUL!")
+            print(f"{'='*60}")
+
         except Exception as e:
-            print(f"Error: {type(e).__name__}: {e}")
+            print(f"\n{'='*60}")
+            print(f"❌ ERROR: {type(e).__name__}: {e}")
+            print(f"{'='*60}")
+            import traceback
+            traceback.print_exc()
             sys.exit(1)
-    
+
     asyncio.run(main())
