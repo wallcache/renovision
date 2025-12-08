@@ -364,60 +364,51 @@
     const LOGO_URL = 'logo.png';
     
     // Toggle options
+    const DESIGN_STYLE_OPTIONS = [
+      { id: 'midcentury', label: 'Mid-Century' },
+      { id: 'minimal', label: 'Minimal' },
+      { id: 'industrial', label: 'Industrial' },
+      { id: 'scandinavian', label: 'Scandinavian' },
+      { id: 'wabisabi', label: 'Wabi-Sabi' },
+      { id: 'mediterranean', label: 'Mediterranean' },
+    ];
+
+    const ROOM_TYPE_OPTIONS = [
+      { id: 'living', label: 'Living' },
+      { id: 'bedroom', label: 'Bedroom' },
+      { id: 'kitchen', label: 'Kitchen' },
+      { id: 'dining', label: 'Dining' },
+      { id: 'bathroom', label: 'Bathroom' },
+      { id: 'office', label: 'Office' },
+      { id: 'hallway', label: 'Hallway' },
+      { id: 'garden', label: 'Garden' },
+      { id: 'outdoor', label: 'Outdoor' },
+    ];
+
     const TIME_OF_DAY_OPTIONS = [
       { id: 'day', label: 'Day' },
       { id: 'night', label: 'Night' },
-      { id: 'dusk', label: 'Dusk' },
-      { id: 'dawn', label: 'Dawn' },
       { id: 'golden_hour', label: 'Golden Hour' },
     ];
-    
-    // Interior Design Style options
-    const DESIGN_STYLE_OPTIONS = [
-      { id: 'midcentury', label: 'Mid-Century Modern' },
-      { id: 'minimalist', label: 'Minimalist' },
-      { id: 'industrial', label: 'Industrial' },
-      { id: 'scandinavian', label: 'Scandinavian' },
-      { id: 'japanese', label: 'Japanese / Wabi-Sabi' },
-      { id: 'mediterranean', label: 'Mediterranean' },
-    ];
-    
-    // Room Type options
-    const ROOM_TYPE_OPTIONS = [
-      { id: 'bedroom', label: 'Bedroom' },
-      { id: 'living_room', label: 'Living Room' },
-      { id: 'kitchen', label: 'Kitchen' },
-      { id: 'dining_room', label: 'Dining Room' },
-      { id: 'bathroom', label: 'Bathroom' },
-      { id: 'office', label: 'Office / Study' },
-      { id: 'garden', label: 'Garden / Outdoor' },
-    ];
-    
+
     const COLOUR_SCHEME_OPTIONS = [
-      { id: 'soft_linen', label: 'Soft Linen' },
-      { id: 'cream_core', label: 'Cream Core' },
-      { id: 'sage_calm', label: 'Sage Calm' },
-      { id: 'terracotta_sun', label: 'Terracotta Sun' },
-      { id: 'olive_grove', label: 'Olive Grove' },
-      { id: 'burgundy_depth', label: 'Burgundy Depth' },
-      { id: 'forest_green', label: 'Forest Green' },
-      { id: 'midnight_blue', label: 'Midnight Blue' },
-      { id: 'amber_glow', label: 'Amber Glow' },
-      { id: 'nordic_mist', label: 'Nordic Mist' },
+      { id: 'white', label: 'White', color: '#FFFFFF' },
+      { id: 'black', label: 'Black', color: '#000000' },
+      { id: 'charcoal', label: 'Charcoal Grey', color: '#36454F' },
+      { id: 'navy', label: 'Navy Blue', color: '#000080' },
+      { id: 'teal', label: 'Teal', color: '#008080' },
+      { id: 'forest_green', label: 'Forest Green', color: '#228B22' },
+      { id: 'olive', label: 'Olive', color: '#808000' },
+      { id: 'mustard', label: 'Mustard', color: '#FFDB58' },
+      { id: 'terracotta', label: 'Terracotta', color: '#E2725B' },
+      { id: 'burgundy', label: 'Burgundy', color: '#800020' },
     ];
-    
+
     const FLOORING_OPTIONS = [
-      { id: 'parquet', label: 'Parquet' },
-      { id: 'wood', label: 'Wood' },
-      { id: 'tiles', label: 'Tiles' },
+      { id: 'wood_parquet', label: 'Wood Parquet' },
+      { id: 'tiled', label: 'Tiled' },
       { id: 'stone_slabs', label: 'Stone Slabs' },
-      { id: 'brushed_concrete', label: 'Brushed Concrete' },
-    ];
-    
-    const GREENERY_OPTIONS = [
-      { id: 'plants', label: 'Plants Only' },
-      { id: 'flowers', label: 'Flowers Only' },
-      { id: 'both', label: 'Both' },
+      { id: 'polished_concrete', label: 'Polished Concrete' },
     ];
 
     // ============================================
@@ -435,7 +426,67 @@
       );
     }
     
-    function ToggleGroup({ label, options, value, onChange }) {
+    function ColourSwatch({ color, label, active, onClick }) {
+      return (
+        <button
+          onClick={onClick}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+            active ? 'bg-taupe/10 ring-2 ring-taupe scale-105' : 'hover:bg-linen-100'
+          }`}
+        >
+          <div
+            className="w-6 h-6 rounded-full border-2 border-linen-300"
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-sm text-linen-800">{label}</span>
+        </button>
+      );
+    }
+
+    function ToggleGroup({ label, options, value, onChange, isCollapsible, isOpen, onToggle, showSwatches }) {
+      if (isCollapsible) {
+        return (
+          <div className="mb-4 border-b border-linen-200 pb-4">
+            <button
+              onClick={onToggle}
+              className="w-full flex items-center justify-between text-left py-2"
+            >
+              <label className="text-sm font-medium text-linen-700">{label}</label>
+              <svg
+                className={`w-5 h-5 text-linen-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {isOpen && (
+              <div className={showSwatches ? 'grid grid-cols-2 gap-2 mt-3' : 'toggle-group mt-3'}>
+                {options.map(option =>
+                  showSwatches ? (
+                    <ColourSwatch
+                      key={option.id}
+                      color={option.color}
+                      label={option.label}
+                      active={value === option.id}
+                      onClick={() => onChange(option.id)}
+                    />
+                  ) : (
+                    <TogglePill
+                      key={option.id}
+                      label={option.label}
+                      active={value === option.id}
+                      onClick={() => onChange(option.id)}
+                    />
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       return (
         <div className="mb-8">
           <label className="block text-sm font-medium text-linen-700 mb-3">{label}</label>
@@ -607,7 +658,7 @@
       const [timeOfDay, setTimeOfDay] = useState(null);
       const [colourScheme, setColourScheme] = useState(null);
       const [flooring, setFlooring] = useState(null);
-      const [greenery, setGreenery] = useState(null);
+      const [activeToggleId, setActiveToggleId] = useState(null);
       const [extraNotes, setExtraNotes] = useState('');
       const [autoDownload, setAutoDownload] = useState(false);
       
@@ -698,7 +749,6 @@
               time_of_day: timeOfDay,
               colour_scheme: colourScheme,
               flooring: flooring,
-              greenery: greenery,
               extra_notes: extraNotes || null,
               auto_download: autoDownload
             })
@@ -816,6 +866,11 @@
                       type="url"
                       value={rightmoveUrl}
                       onChange={(e) => setRightmoveUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && rightmoveUrl && !isLoading) {
+                          fetchPropertyImages(rightmoveUrl);
+                        }
+                      }}
                       placeholder="https://www.rightmove.co.uk/properties/..."
                       className="input-field flex-1"
                     />
@@ -910,47 +965,56 @@
                   <div>
                     <h2 className="font-serif text-3xl text-linen-900 mb-2">Configure your renovation</h2>
                     <p className="text-linen-600 mb-8">All options are optional. Leave blank for AI defaults.</p>
-                    
+
                     <ToggleGroup
-                      label="Interior Design Style"
+                      label="Style"
                       options={DESIGN_STYLE_OPTIONS}
                       value={designStyle}
                       onChange={setDesignStyle}
+                      isCollapsible={true}
+                      isOpen={activeToggleId === 'style'}
+                      onToggle={() => setActiveToggleId(activeToggleId === 'style' ? null : 'style')}
                     />
-                    
+
                     <ToggleGroup
-                      label="Room Type"
+                      label="Room"
                       options={ROOM_TYPE_OPTIONS}
                       value={roomType}
                       onChange={setRoomType}
+                      isCollapsible={true}
+                      isOpen={activeToggleId === 'room'}
+                      onToggle={() => setActiveToggleId(activeToggleId === 'room' ? null : 'room')}
                     />
-                    
+
                     <ToggleGroup
                       label="Time of Day"
                       options={TIME_OF_DAY_OPTIONS}
                       value={timeOfDay}
                       onChange={setTimeOfDay}
+                      isCollapsible={true}
+                      isOpen={activeToggleId === 'time'}
+                      onToggle={() => setActiveToggleId(activeToggleId === 'time' ? null : 'time')}
                     />
-                    
+
                     <ToggleGroup
                       label="Colour Scheme"
                       options={COLOUR_SCHEME_OPTIONS}
                       value={colourScheme}
                       onChange={setColourScheme}
+                      isCollapsible={true}
+                      isOpen={activeToggleId === 'colour'}
+                      onToggle={() => setActiveToggleId(activeToggleId === 'colour' ? null : 'colour')}
+                      showSwatches={true}
                     />
-                    
+
                     <ToggleGroup
-                      label="Flooring"
+                      label="Floor"
                       options={FLOORING_OPTIONS}
                       value={flooring}
                       onChange={setFlooring}
-                    />
-                    
-                    <ToggleGroup
-                      label="Decorative Greenery"
-                      options={GREENERY_OPTIONS}
-                      value={greenery}
-                      onChange={setGreenery}
+                      isCollapsible={true}
+                      isOpen={activeToggleId === 'floor'}
+                      onToggle={() => setActiveToggleId(activeToggleId === 'floor' ? null : 'floor')}
                     />
                     
                     <div className="mb-8">
@@ -1061,7 +1125,7 @@
 
           <footer className="border-t border-linen-300/30 py-8 px-6 mt-16">
             <div className="max-w-5xl mx-auto text-center text-sm text-linen-500">
-              <p>Powered by AI • Built for dreamers of doer-uppers</p>
+              <p>Powered by only the most powerful image generation models</p>
             </div>
           </footer>
         </div>

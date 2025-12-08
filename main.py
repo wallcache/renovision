@@ -100,13 +100,12 @@ class PropertyResponse(BaseModel):
 class RenovationRequest(BaseModel):
     image_url: str
     # Primary configuration options
-    style: Optional[str] = None  # midcentury, minimalist, industrial, scandinavian, japanese, mediterranean
-    room_type: Optional[str] = None  # bedroom, living_room, kitchen, dining_room, bathroom, office
+    style: Optional[str] = None  # midcentury, minimal, industrial, scandinavian, wabisabi, mediterranean
+    room_type: Optional[str] = None  # living, bedroom, kitchen, dining, bathroom, office, hallway, garden, outdoor
     # Optional configuration toggles
-    time_of_day: Optional[str] = None  # day, night, dusk, dawn, golden_hour
-    colour_scheme: Optional[str] = None  # soft_linen, cream_core, sage_calm, etc.
-    flooring: Optional[str] = None  # parquet, wood, tiles, stone_slabs, brushed_concrete
-    greenery: Optional[str] = None  # plants, flowers, both
+    time_of_day: Optional[str] = None  # day, night, golden_hour
+    colour_scheme: Optional[str] = None  # white, black, charcoal, navy, teal, forest_green, olive, mustard, terracotta, burgundy
+    flooring: Optional[str] = None  # wood_parquet, tiled, stone_slabs, polished_concrete
     extra_notes: Optional[str] = None
     auto_download: Optional[bool] = False
 
@@ -172,61 +171,53 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     # Interior Design Style descriptions
     style_prompts = {
         'midcentury': 'Mid-Century Modern design featuring warm walnut and teak wood tones, clean architectural lines, organic curves, iconic furniture with hairpin legs, statement lighting, warm mustard and olive accents',
-        'minimalist': 'Minimalist design with sleek clutter-free styling, refined neutral palette of whites and greys, functional furniture with clean lines, strategic negative space, hidden storage, understated elegance',
+        'minimal': 'Minimal design with sleek clutter-free styling, refined neutral palette of whites and greys, functional furniture with clean lines, strategic negative space, hidden storage, understated elegance',
         'industrial': 'Industrial aesthetic with metal fixtures and Edison bulbs, concrete-effect surfaces, black steel elements, leather and distressed wood furniture, urban warehouse character',
         'scandinavian': 'Scandinavian hygge-inspired design with light oak and birch woods, cosy wool and linen textiles, bright neutral whites and soft greys, functional furniture, warm ambient lighting',
-        'japanese': 'Japanese Wabi-Sabi design embracing natural imperfection, low platform furniture, natural wood and stone materials, zen minimalism, asymmetric balance, clean simplicity',
+        'wabisabi': 'Wabi-Sabi design embracing natural imperfection, low platform furniture, natural wood and stone materials, zen minimalism, asymmetric balance, clean simplicity',
         'mediterranean': 'Mediterranean style with terracotta tones, wrought iron details, warm ochre and sun-bleached colours, rustic wooden elements, artisanal ceramics',
     }
-    
+
     # Room Type descriptions (for furniture context only)
     room_type_furniture = {
+        'living': 'appropriate living room furniture like sofa, coffee table, ambient lighting',
         'bedroom': 'appropriate bedroom furniture like bed, bedside tables, soft lighting',
-        'living_room': 'appropriate living room furniture like sofa, coffee table, ambient lighting',
         'kitchen': 'appropriate kitchen elements like updated cabinets, countertops, modern appliances',
-        'dining_room': 'appropriate dining furniture like table and chairs, statement lighting',
+        'dining': 'appropriate dining furniture like table and chairs, statement lighting',
         'bathroom': 'appropriate bathroom fixtures like updated vanity, modern taps, quality tiles',
         'office': 'appropriate office furniture like desk, ergonomic chair, task lighting',
+        'hallway': 'appropriate hallway elements like console table, runner rug, wall lighting',
         'garden': 'landscaped garden features',
+        'outdoor': 'outdoor furniture and landscaping elements',
     }
     
     # Time of day lighting descriptions
     time_of_day_prompts = {
         'day': 'bright natural daylight, crisp clean shadows',
         'night': 'warm artificial lighting, cosy interior mood, soft ambient glow',
-        'dusk': 'moody ambient light, soft purple and orange tones through windows',
-        'dawn': 'soft early morning light, gentle pastel glow, fresh atmosphere',
         'golden_hour': 'warm cinematic golden hour lighting with glowing highlights',
     }
-    
+
     # Colour scheme palettes
     colour_scheme_prompts = {
-        'soft_linen': 'soft off-white walls, chalky neutrals, pale timber accents',
-        'cream_core': 'rich cream and ivory palette, buttery whites, elegant shell tones',
-        'sage_calm': 'muted sage green walls, pale oak finishes, calming atmosphere',
-        'terracotta_sun': 'sun-baked terracotta tones, warm plaster walls, earthy reds',
-        'olive_grove': 'dusty olive walls, warm sand neutrals, aged wood tones',
-        'burgundy_depth': 'deep burgundy walls, charcoal contrasts, rich velvet textures',
+        'white': 'crisp white walls, clean bright palette',
+        'black': 'dramatic black walls with contrasting light elements',
+        'charcoal': 'charcoal grey walls, moody sophisticated atmosphere',
+        'navy': 'navy blue walls with warm brass or gold accents',
+        'teal': 'teal walls, jewel-toned rich atmosphere',
         'forest_green': 'dark forest green walls, warm timber, bronze accents',
-        'midnight_blue': 'navy blue walls with crisp whites, brass lighting highlights',
-        'amber_glow': 'golden neutral palette, honey-toned woods, camel tones',
-        'nordic_mist': 'cool mist-grey tones, Scandinavian minimal palette, pale woods',
+        'olive': 'olive green walls, earthy natural tones',
+        'mustard': 'mustard yellow walls, warm vibrant energy',
+        'terracotta': 'terracotta walls, Mediterranean warmth',
+        'burgundy': 'burgundy walls, deep luxurious tones',
     }
-    
+
     # Flooring descriptions
     flooring_prompts = {
-        'parquet': 'parquet flooring in herringbone pattern',
-        'wood': 'wide plank natural wood flooring',
-        'tiles': 'large format ceramic tiles',
+        'wood_parquet': 'wood parquet flooring in herringbone or chevron pattern',
+        'tiled': 'large format ceramic or porcelain tiles',
         'stone_slabs': 'natural stone slab flooring',
-        'brushed_concrete': 'polished concrete floors',
-    }
-    
-    # Greenery descriptions
-    greenery_prompts = {
-        'plants': 'add indoor plants like fiddle leaf fig, monstera, trailing pothos',
-        'flowers': 'add fresh floral arrangements in elegant vases',
-        'both': 'add indoor plants and fresh floral arrangements',
+        'polished_concrete': 'polished concrete floors with subtle sheen',
     }
     
     # Build the prompt - FOCUS ON EDITING, NOT GENERATING
@@ -288,18 +279,17 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     # Add flooring if specified
     if request.flooring and request.flooring in flooring_prompts:
         prompt_parts.append(f"Flooring: {flooring_prompts[request.flooring]}.")
-    
-    # Add greenery if specified
-    if request.greenery and request.greenery in greenery_prompts:
-        prompt_parts.append(f"{greenery_prompts[request.greenery]}.")
-    
+
+    # Always include greenery for realism and warmth
+    prompt_parts.append("Include tasteful placement of indoor plants and flowers to enhance realism and warmth.")
+
     # Add extra notes if provided
     if request.extra_notes:
         prompt_parts.append(f"Also: {request.extra_notes}")
-    
+
     # Final quality reminder
     prompt_parts.append("Photorealistic result, professional interior photography quality.")
-    
+
     return " ".join(prompt_parts)
 
 
