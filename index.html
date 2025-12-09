@@ -1774,19 +1774,21 @@
 
                 {isLoading ? (
                   <div className="max-w-2xl mx-auto">
-                    <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center">
+                    <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center" style={{ background: '#fdfcfb' }}>
                       <div className="text-center">
-                        <svg className="rotating-blob w-12 h-12 mx-auto mb-4" viewBox="0 0 100 100" fill="none">
-                          <path
-                            d="M50,10 C60,8 75,12 85,25 C92,35 95,48 90,62 C85,75 72,85 58,88 C45,91 30,88 20,78 C10,68 5,52 8,38 C11,24 25,12 40,10 Z"
-                            fill="#6b655c"
-                            opacity="0.3"
-                          />
-                          <path
-                            d="M50,20 C58,18 68,22 75,32 C80,40 82,50 78,60 C74,69 65,76 55,78 C46,80 35,77 28,70 C21,63 18,52 20,42 C22,32 32,22 42,20 Z"
-                            fill="#a89f93"
-                          />
-                        </svg>
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="w-32 h-32 mx-auto mb-4"
+                          style={{
+                            mixBlendMode: 'multiply',
+                            filter: 'contrast(1.1)'
+                          }}
+                        >
+                          <source src="renovision_animation.mp4" type="video/mp4" />
+                        </video>
                         <LoadingMessage />
                       </div>
                     </div>
