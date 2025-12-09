@@ -200,16 +200,16 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
 
     # Colour scheme palettes
     colour_scheme_prompts = {
-        'white': 'crisp white walls, clean bright palette',
-        'black': 'dramatic black walls with contrasting light elements',
-        'charcoal': 'charcoal grey walls, moody sophisticated atmosphere',
-        'navy': 'navy blue walls with warm brass or gold accents',
-        'teal': 'teal walls, jewel-toned rich atmosphere',
+        'soft_linen': 'soft warm linen white walls, clean calm palette with subtle warmth',
+        'cream_core': 'rich cream walls, warm inviting atmosphere',
+        'sage_calm': 'soft sage green walls, calming natural tones',
+        'terracotta_sun': 'warm terracotta walls, sun-baked Mediterranean warmth',
+        'olive_grove': 'olive green walls, earthy natural sophistication',
+        'burgundy_depth': 'deep burgundy walls, luxurious moody tones',
         'forest_green': 'dark forest green walls, warm timber, bronze accents',
-        'olive': 'olive green walls, earthy natural tones',
-        'mustard': 'mustard yellow walls, warm vibrant energy',
-        'terracotta': 'terracotta walls, Mediterranean warmth',
-        'burgundy': 'burgundy walls, deep luxurious tones',
+        'midnight_blue': 'midnight blue walls with warm brass or gold accents',
+        'amber_glow': 'warm amber yellow walls, vibrant golden energy',
+        'nordic_mist': 'pale grey-white walls, Scandinavian bright minimalism',
     }
 
     # Flooring descriptions
@@ -223,30 +223,28 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     # Build the prompt - FOCUS ON EDITING, NOT GENERATING
     
     # Special handling for garden/outdoor spaces
-    if request.room_type == 'garden':
+    if request.room_type in ['garden', 'outdoor']:
         prompt_parts = [
             "EDIT THE PROVIDED PHOTOGRAPH of this outdoor space. Do not create a new image - modify the existing photo only.",
             "Keep the EXACT same garden boundaries, fences, walls, and structures in their current positions.",
             "Keep the EXACT same camera angle and perspective as the input photo.",
-            "Transform this into a beautifully landscaped English garden.",
+            "Transform this into a minimal, sophisticated English garden with restraint and elegance.",
+            "Repair and refinish any existing fences to look fresh and well-maintained.",
+            "Leave any large existing trees exactly where they are - preserve mature planting.",
+            "Renovate any existing garden sheds to look clean, painted, and well-kept.",
             "Add a pristine manicured lawn with healthy lush green grass.",
-            "Include neatly trimmed box hedges (buxus) creating structure, borders, and definition.",
-            "Add natural York stone or flagstone stepping stones creating an elegant garden path.",
-            "Include tasteful planting beds with layered perennials, ornamental grasses, and seasonal flowers.",
-            "Add classic English garden elements: wooden bench, terracotta pots, or elegant planters.",
-            "The garden should look established, well-maintained, and quintessentially British.",
+            "PLANTING: Keep it minimal - ONLY white hydrangeas and subtle neatly-trimmed box hedging for structure.",
+            "NO colourful flowers, NO busy borders, NO grandma's garden aesthetic.",
+            "If space allows, add simple stepping stone garden path through the grass (natural stone or slate).",
+            "The garden should feel calm, understated, and refined - not overdone.",
         ]
-        
-        # Add time of day if specified
-        if request.time_of_day and request.time_of_day in time_of_day_prompts:
-            prompt_parts.append(f"Lighting: {time_of_day_prompts[request.time_of_day]}.")
-        
+
         # Add extra notes if provided
         if request.extra_notes:
             prompt_parts.append(f"Also: {request.extra_notes}")
-        
+
         prompt_parts.append("Photorealistic result, professional landscape photography quality, natural daylight.")
-        
+
         return " ".join(prompt_parts)
     
     # Standard interior renovation prompt
