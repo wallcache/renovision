@@ -1062,15 +1062,68 @@
       const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(() =>
         Math.floor(Math.random() * EXTRA_NOTES_PLACEHOLDERS.length)
       );
+      const [showHint, setShowHint] = useState(false);
+      const [isMobile, setIsMobile] = useState(false);
       const typewriterTimeout = useRef(null);
       const pauseTimeout = useRef(null);
       const fadeTimeout = useRef(null);
+      const textareaRef = useRef(null);
+      const touchStartX = useRef(0);
+      const touchStartY = useRef(0);
+
+      // Detect mobile device
+      useEffect(() => {
+        const checkMobile = () => {
+          setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+      }, []);
+
+      // Lock in suggestion function
+      const lockInSuggestion = useCallback(() => {
+        if (placeholder && !value) {
+          onChange({ target: { value: placeholder } });
+          setPlaceholder('');
+          setShowHint(false);
+        }
+      }, [placeholder, value, onChange]);
+
+      // Handle Tab key press
+      const handleKeyDown = useCallback((e) => {
+        if (e.key === 'Tab' && placeholder && !value) {
+          e.preventDefault();
+          lockInSuggestion();
+        }
+      }, [placeholder, value, lockInSuggestion]);
+
+      // Handle swipe right on mobile
+      const handleTouchStart = useCallback((e) => {
+        touchStartX.current = e.touches[0].clientX;
+        touchStartY.current = e.touches[0].clientY;
+      }, []);
+
+      const handleTouchEnd = useCallback((e) => {
+        if (!placeholder || value) return;
+
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaX = touchEndX - touchStartX.current;
+        const deltaY = Math.abs(touchEndY - touchStartY.current);
+
+        // Swipe right detection (minimum 50px, mostly horizontal)
+        if (deltaX > 50 && deltaY < 30) {
+          lockInSuggestion();
+        }
+      }, [placeholder, value, lockInSuggestion]);
 
       useEffect(() => {
         // Only animate placeholder when textarea is empty
         if (value && value.trim().length > 0) {
           setPlaceholder('');
           setPlaceholderOpacity(1);
+          setShowHint(false);
           if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
           if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
           if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
@@ -1086,11 +1139,17 @@
             charIndex++;
             const delay = 15 + Math.random() * 10; // 15-25ms per char (faster)
             typewriterTimeout.current = setTimeout(typeIn, delay);
+
+            // Show hint when typing is halfway done
+            if (charIndex === Math.floor(currentText.length / 2)) {
+              setShowHint(true);
+            }
           } else {
             // Finished typing - brief pause then fade out
             pauseTimeout.current = setTimeout(() => {
               // Fade out
               setPlaceholderOpacity(0);
+              setShowHint(false);
               // Wait 40ms after fade, then move to next
               fadeTimeout.current = setTimeout(() => {
                 setPlaceholder('');
@@ -1114,22 +1173,36 @@
       }, [currentSuggestionIndex, value]);
 
       return (
-        <div className="mb-8 mt-8">
+        <div className="mb-8 mt-8 relative">
           <label className="block text-sm font-medium text-linen-700 mb-1">
             {label}
           </label>
           {sublabel && (
             <p className="text-xs text-linen-500 mb-3">{sublabel}</p>
           )}
-          <textarea
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            className="input-field resize-none h-28"
-            style={{
-              '--placeholder-opacity': placeholderOpacity
-            }}
-          />
+          <div className="relative">
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={onChange}
+              onKeyDown={handleKeyDown}
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              placeholder={placeholder}
+              className="input-field resize-none h-28"
+              style={{
+                '--placeholder-opacity': placeholderOpacity
+              }}
+            />
+            {showHint && placeholder && !value && (
+              <div
+                className="absolute bottom-2 left-2 text-xs text-linen-400 pointer-events-none transition-opacity duration-300"
+                style={{ opacity: showHint ? 0.7 : 0 }}
+              >
+                {isMobile ? '↪ Swipe right to lock in' : '↹ Tab to lock in'}
+              </div>
+            )}
+          </div>
         </div>
       );
     }
