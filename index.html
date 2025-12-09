@@ -537,6 +537,17 @@
       { id: 'botanical', label: 'Botanical Wallpaper' },
     ];
 
+    const GARDEN_STYLE_OPTIONS = [
+      { id: 'english_cottage', label: 'English Cottage Garden', description: 'Romantic, abundant, joyfully messy in the best way. Expect to find: billowing mixed borders of roses, lavender, foxgloves and delphiniums, winding paths, climbing plants over arches or pergolas, hidden benches, and a gentle "just discovered this" feel everywhere.' },
+      { id: 'naturalistic_meadow', label: 'Naturalistic / Meadow Garden', description: 'Calm, modern-wild, and nature-led. Expect to find: informal drifts of grasses and perennial wildflowers, sweeping planting that changes seasonally, soft curving mow paths, wildlife ponds, and a feeling of serene movement through open space.' },
+      { id: 'modern_contemporary', label: 'Modern / Contemporary Garden', description: 'Clean, sculptural, and confident. Expect to find: sharp lines and clear geometry, large-format paving or decking, raised planters, limited plant palettes (like grasses or acers), water features, outdoor lounges, and dramatic evening lighting.' },
+      { id: 'japanese', label: 'Japanese Garden', description: 'Quietly spiritual, precise without being stiff. Expect to find: stone paths, stepping stones, clipped junipers or pines, mossy ground cover, gravel gardens, reflecting ponds, lanterns, and framed viewpoints designed to guide calm contemplation.' },
+      { id: 'mediterranean', label: 'Mediterranean Garden', description: 'Sun-bleached, relaxed, permanently on holiday. Expect to find: olive or fig trees, lavender and rosemary, gravel groundcover, terracotta pots, stone walls, water bowls, shaded dining pergolas, and planting designed for drought tolerance.' },
+      { id: 'woodland', label: 'Woodland Garden', description: 'Enclosed, textural, and deeply atmospheric. Expect to find: mature trees creating dappled shade, layers of ferns and hostas, meandering bark paths, natural stone seating, hellebores and spring bulbs, and pockets that feel like secret hideaways.' },
+      { id: 'urban_courtyard', label: 'Urban Courtyard Garden', description: 'Small-space sophistication with attitude. Expect to find: vertical planting, climbers on walls, container cluster arrangements, paved floors softened by greenery, bistro or lounge seating, mirrors for depth, and clever lighting for nighttime drama.' },
+      { id: 'wildlife_pollinator', label: 'Wildlife / Pollinator Garden', description: 'Buzzing, soulful, life-first design. Expect to find: wildflower meadows, mixed hedgerows, ponds, log piles, insect hotels, seed-rich planting, unmanicured corners, and a layout that trades rigid tidiness for living abundance.' },
+    ];
+
     const LOADING_MESSAGES = [
       "Overshooting the budget...",
       "Knocking through a wall or two...",
@@ -940,7 +951,7 @@
     }
 
     // Configuration summary for results page
-    function ConfigSummary({ style, roomType, timeOfDay, colourScheme, flooring, wallpaper }) {
+    function ConfigSummary({ style, roomType, timeOfDay, colourScheme, flooring, wallpaper, gardenStyle }) {
       const getLabelForId = (options, id) => {
         const option = options.find(o => o.id === id);
         return option ? option.label : null;
@@ -949,6 +960,7 @@
       const items = [
         { label: 'Style', value: getLabelForId(DESIGN_STYLE_OPTIONS, style) },
         { label: 'Room', value: getLabelForId(ROOM_TYPE_OPTIONS, roomType) },
+        { label: 'Garden Style', value: getLabelForId(GARDEN_STYLE_OPTIONS, gardenStyle) },
         { label: 'Lighting', value: getLabelForId(TIME_OF_DAY_OPTIONS, timeOfDay) },
         { label: 'Colours', value: getLabelForId(COLOUR_SCHEME_OPTIONS, colourScheme) },
         { label: 'Flooring', value: getLabelForId(FLOORING_OPTIONS, flooring) },
@@ -1280,6 +1292,7 @@
       const [colourScheme, setColourScheme] = useState(null);
       const [flooring, setFlooring] = useState(null);
       const [wallpaper, setWallpaper] = useState('none');
+      const [gardenStyle, setGardenStyle] = useState(null);
       const [activeToggleId, setActiveToggleId] = useState('room');
 
       // Check if garden/outdoor is selected
@@ -1292,8 +1305,11 @@
 
         if (value) {
           if (isOutdoor) {
-            // For outdoor spaces, close all other toggles
-            setTimeout(() => setActiveToggleId(null), 200);
+            // For outdoor spaces, open garden style toggle
+            setTimeout(() => {
+              setActiveToggleId(null);
+              setTimeout(() => setActiveToggleId('garden_style'), 100);
+            }, 200);
           } else {
             // For indoor spaces, advance to style
             setTimeout(() => {
@@ -1346,6 +1362,13 @@
 
       const handleWallpaperChange = (value) => {
         setWallpaper(value);
+        if (value) {
+          setTimeout(() => setActiveToggleId(null), 200);
+        }
+      };
+
+      const handleGardenStyleChange = (value) => {
+        setGardenStyle(value);
         if (value) {
           setTimeout(() => setActiveToggleId(null), 200);
         }
@@ -1460,6 +1483,7 @@
               colour_scheme: colourScheme,
               flooring: flooring,
               wallpaper: wallpaper !== 'none' ? wallpaper : null,
+              garden_style: gardenStyle,
               extra_notes: extraNotes || null,
               auto_download: autoDownload
             })
@@ -1515,6 +1539,7 @@
         setColourScheme(null);
         setFlooring(null);
         setWallpaper('none');
+        setGardenStyle(null);
         setExtraNotes('');
         setAutoDownload(false);
         setGeneratedResult(null);
@@ -1529,6 +1554,7 @@
         setColourScheme(null);
         setFlooring(null);
         setWallpaper('none');
+        setGardenStyle(null);
         setExtraNotes('');
         setError(null);
         setStep(2);
@@ -1682,6 +1708,17 @@
                       onToggle={() => setActiveToggleId(activeToggleId === 'room' ? null : 'room')}
                     />
 
+                    {isOutdoorSpace && (
+                      <AccordionToggleGroup
+                        label="Garden Style"
+                        options={GARDEN_STYLE_OPTIONS}
+                        value={gardenStyle}
+                        onChange={handleGardenStyleChange}
+                        isOpen={activeToggleId === 'garden_style'}
+                        onToggle={() => setActiveToggleId(activeToggleId === 'garden_style' ? null : 'garden_style')}
+                      />
+                    )}
+
                     {!isOutdoorSpace && (
                       <>
                         <AccordionToggleGroup
@@ -1816,6 +1853,7 @@
                       colourScheme={colourScheme}
                       flooring={flooring}
                       wallpaper={wallpaper}
+                      gardenStyle={gardenStyle}
                     />
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">

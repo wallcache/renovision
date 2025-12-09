@@ -107,6 +107,7 @@ class RenovationRequest(BaseModel):
     colour_scheme: Optional[str] = None  # Full ROYGBIV spectrum + neutrals
     flooring: Optional[str] = None  # wood_parquet, tiled, stone_slabs, polished_concrete, carpetted
     wallpaper: Optional[str] = None  # floral, geometric, striped, damask, botanical
+    garden_style: Optional[str] = None  # english_cottage, naturalistic_meadow, modern_contemporary, japanese, mediterranean, woodland, urban_courtyard, wildlife_pollinator
     extra_notes: Optional[str] = None
     auto_download: Optional[bool] = False
 
@@ -261,6 +262,25 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'damask': 'traditional damask wallpaper with ornate repeating patterns, luxurious heritage style',
         'botanical': 'lush botanical wallpaper with large-scale leaf and plant motifs, tropical sophistication',
     }
+
+    # Garden style descriptions
+    garden_style_prompts = {
+        'english_cottage': 'Transform into a romantic English Cottage Garden. Create billowing mixed borders filled with roses, lavender, foxgloves, and delphiniums in abundant layers. Add winding natural paths that curve gently through the space. Include climbing plants over arches or pergolas if space allows. Place a hidden bench or seating nook. The overall feel should be joyfully abundant, gently messy in the best way, with a "just discovered this secret garden" romantic atmosphere.',
+
+        'naturalistic_meadow': 'Transform into a calm Naturalistic Meadow Garden. Plant informal drifts of ornamental grasses (like Stipa, Molinia) mixed with perennial wildflowers (like Echinacea, Verbena, Achillea). Create sweeping naturalistic planting that feels seasonal and ever-changing. Add soft curving mown paths through taller grasses. Include a wildlife pond if space permits. The overall feel should be modern-wild, serene, and nature-led with movement and texture.',
+
+        'modern_contemporary': 'Transform into a clean Modern Contemporary Garden. Use sharp geometric lines and clear architectural forms throughout. Install large-format paving slabs or composite decking in neutral tones. Add raised rectangular planters with limited plant palette (architectural grasses like Miscanthus, or Japanese maples). Include a minimalist water feature (rill or reflecting pool). Add sleek outdoor lounge furniture. Install dramatic LED strip lighting for evening drama. The overall feel should be sculptural, confident, and sophisticatedly minimal.',
+
+        'japanese': 'Transform into a quietly spiritual Japanese Garden. Lay natural stone paths or stepping stones with careful placement. Plant clipped evergreen shrubs (pines, junipers, box) with precise sculptural pruning. Add low mossy ground cover and gravel areas raked in patterns. Include a reflecting pond or water bowl if space allows. Place a stone lantern as a focal point. Frame key views with careful plant placement to guide contemplation. The overall feel should be precise without stiffness, balanced asymmetrically, deeply calm and meditative.',
+
+        'mediterranean': 'Transform into a sun-bleached Mediterranean Garden. Plant olive trees or fig trees as structural anchors. Add lavender, rosemary, and other aromatic drought-tolerant herbs throughout. Use gravel as ground cover in warm terracotta tones. Place terracotta pots clustered in groups. Include low stone walls or rendered walls in warm ochre. Add a water bowl or simple fountain. Install a shaded dining pergola with climbing vines. The overall feel should be relaxed, permanently on holiday, sun-soaked and aromatic.',
+
+        'woodland': 'Transform into an enclosed atmospheric Woodland Garden. Preserve or enhance existing mature trees to create dappled shade canopy. Plant layered understory with ferns, hostas, and shade-loving perennials. Add meandering bark-mulch paths that curve naturally. Include natural moss-covered stone seating or log benches. Plant spring bulbs (bluebells, snowdrops) and hellebores for seasonal drama. Create pockets that feel like secret hideaways. The overall feel should be textural, enclosed, deeply atmospheric and mysteriously beautiful.',
+
+        'urban_courtyard': 'Transform into a sophisticated Urban Courtyard Garden. Maximize vertical space with wall-mounted planters and climbing plants on trellises. Create bold container cluster arrangements at multiple heights. Install sleek paving covering most of the floor, softened by strategic greenery. Add compact bistro furniture or a modern lounge chair. Use mirrors on walls to create depth illusion. Install clever uplighting and string lights for nighttime atmosphere. The overall feel should be small-space sophistication with attitude, layered and stylish.',
+
+        'wildlife_pollinator': 'Transform into a buzzing Wildlife/Pollinator Garden. Plant wildflower meadow sections with native species rich in nectar. Add mixed hedgerows with berries and seeds for birds. Include a wildlife pond with gentle sloping edges. Place log piles and insect hotels in corners. Plant seed-rich flowers (Rudbeckia, Sedum, Verbena). Leave some unmanicured edges and corners deliberately wild. The overall feel should be life-first, soulful, abundant with wildlife, trading rigid tidiness for living richness and biodiversity.',
+    }
     
     # Build the prompt - FOCUS ON EDITING, NOT GENERATING
     
@@ -271,16 +291,24 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
             "EDIT THE PROVIDED PHOTOGRAPH of this outdoor space. Do not create a new image - modify the existing photo only.",
             "Keep the EXACT same garden boundaries, fences, walls, and structures in their current positions.",
             "Keep the EXACT same camera angle and perspective as the input photo.",
-            "Transform this into a minimal, sophisticated English garden with restraint and elegance.",
             "Repair and refinish any existing fences to look fresh and well-maintained.",
             "Leave any large existing trees exactly where they are - preserve mature planting.",
             "Renovate any existing garden sheds to look clean, painted, and well-kept.",
-            "Add a pristine manicured lawn with healthy lush green grass.",
-            "PLANTING: Keep it minimal - ONLY white hydrangeas and subtle neatly-trimmed box hedging for structure.",
-            "NO colourful flowers, NO busy borders, NO grandma's garden aesthetic.",
-            "If space allows, add simple stepping stone garden path through the grass (natural stone or slate).",
-            "The garden should feel calm, understated, and refined - not overdone.",
         ]
+
+        # Apply garden style if specified
+        if request.garden_style and request.garden_style in garden_style_prompts:
+            prompt_parts.append(garden_style_prompts[request.garden_style])
+        else:
+            # Default fallback garden style if none specified
+            prompt_parts.extend([
+                "Transform this into a minimal, sophisticated English garden with restraint and elegance.",
+                "Add a pristine manicured lawn with healthy lush green grass.",
+                "PLANTING: Keep it minimal - ONLY white hydrangeas and subtle neatly-trimmed box hedging for structure.",
+                "NO colourful flowers, NO busy borders, NO grandma's garden aesthetic.",
+                "If space allows, add simple stepping stone garden path through the grass (natural stone or slate).",
+                "The garden should feel calm, understated, and refined - not overdone.",
+            ])
 
         # Add extra notes if provided
         if request.extra_notes:
