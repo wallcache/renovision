@@ -351,9 +351,19 @@
       0%, 100% { opacity: 0.4; }
       50% { opacity: 0.8; }
     }
-    
+
     .loading-pulse {
       animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Organic blob rotation animation */
+    @keyframes rotate-blob {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .rotating-blob {
+      animation: rotate-blob 3s linear infinite;
     }
     
     /* Fade animations */
@@ -1196,10 +1206,10 @@
             />
             {showHint && placeholder && !value && (
               <div
-                className="absolute bottom-2 left-2 text-xs text-linen-400 pointer-events-none transition-opacity duration-300"
+                className="absolute bottom-3 right-3 text-xs text-linen-400 pointer-events-none transition-opacity duration-300"
                 style={{ opacity: showHint ? 0.7 : 0 }}
               >
-                {isMobile ? '↪ Swipe right to lock in' : '↹ Tab to lock in'}
+                {isMobile ? 'swipe right to enter' : 'tab to enter'}
               </div>
             )}
           </div>
@@ -1477,14 +1487,15 @@
           <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
             <div className="max-w-5xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <img 
-                  src={LOGO_URL} 
-                  alt="Renovision" 
-                  className="logo-img"
+                <img
+                  src={LOGO_URL}
+                  alt="Renovision"
+                  className="logo-img cursor-pointer transition-opacity hover:opacity-70"
+                  onClick={resetApp}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
-              
+
               {step > 1 && (
                 <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
                   Start Over
@@ -1703,7 +1714,17 @@
                   <div className="max-w-2xl mx-auto">
                     <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center">
                       <div className="text-center">
-                        <div className="w-12 h-12 border-4 border-linen-300 border-t-linen-700 rounded-full animate-spin mx-auto mb-4"></div>
+                        <svg className="rotating-blob w-12 h-12 mx-auto mb-4" viewBox="0 0 100 100" fill="none">
+                          <path
+                            d="M50,10 C60,8 75,12 85,25 C92,35 95,48 90,62 C85,75 72,85 58,88 C45,91 30,88 20,78 C10,68 5,52 8,38 C11,24 25,12 40,10 Z"
+                            fill="#6b655c"
+                            opacity="0.3"
+                          />
+                          <path
+                            d="M50,20 C58,18 68,22 75,32 C80,40 82,50 78,60 C74,69 65,76 55,78 C46,80 35,77 28,70 C21,63 18,52 20,42 C22,32 32,22 42,20 Z"
+                            fill="#a89f93"
+                          />
+                        </svg>
                         <LoadingMessage />
                       </div>
                     </div>

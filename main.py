@@ -191,11 +191,11 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'outdoor': 'outdoor furniture and landscaping elements',
     }
     
-    # Time of day lighting descriptions
+    # Time of day lighting descriptions - DRAMATIC and CLEARLY PERCEPTIBLE changes
     time_of_day_prompts = {
-        'day': 'Bright daylight scene with soft natural light. Gentle sunlight entering through windows. Airy, balanced exposure. Shadows soft and minimal.',
-        'night': 'Dark exterior visible through windows. Shutters or blinds optionally partially closed. Interior illuminated with warm ambient lighting. Downlights and uplighting for atmospheric glow. Moody but comfortable evening lighting.',
-        'golden_hour': 'Strong warm golden sunlight streaming through windows. Defined light beams hitting interior surfaces. High contrast highlights and warm shadows. Distinct golden spill across walls, floors, and furniture. Cinematic warm glow with dramatic directional lighting.',
+        'day': 'DAYLIGHT SCENE: If exterior sky is visible through windows, make it BRIGHT BLUE DAYLIGHT SKY with white clouds. Interior lighting must be BRIGHT, AIRY, and NATURALLY LIT with soft even illumination throughout. Shadows are soft and minimal. The entire scene should feel fresh, open, and daytime-bright. NO warm tones - keep lighting cool and natural like midday sun.',
+        'night': 'NIGHT SCENE: If exterior sky or outdoor areas are visible through windows, they must be FULLY DARK - pitch black or deep navy blue night sky with NO daylight visible. Interior must be illuminated ONLY by warm artificial lighting (ceiling lights, lamps, downlights). Windows should show darkness outside. The contrast between warm interior lighting and dark exterior must be dramatic and obvious. Overall mood: cozy evening indoors with night visible outside.',
+        'golden_hour': 'GOLDEN HOUR SCENE: If exterior sky is visible through windows, make it GOLDEN PINK AND ORANGE SUNSET SKY with soft fluffy clouds catching warm light. Strong warm GOLDEN SUNLIGHT streaming directionally through windows casting defined light beams and long dramatic shadows across interior surfaces. High contrast between golden highlights and warm shadows. Entire scene bathed in cinematic warm orange-pink glow. This must be DRAMATICALLY different from regular daylight - much warmer, more directional, with visible light rays and long shadows.',
     }
 
     # Colour scheme palettes
