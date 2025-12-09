@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Renovision — See Your Future Home</title>
+  <title>Renovision. A Doer-Upper's Best Friend.</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -496,6 +496,38 @@
       "Imagining what 'good bones' actually means...",
     ];
 
+    const HOMEPAGE_HEADLINES = [
+      // Refined / Aspirational
+      "See What This Place Could Become.",
+      "Discover What's Possible.",
+      "Find the Beauty in the Bones.",
+      "Every Room Has a Second Act.",
+      "Potential, Revealed.",
+      "Visualise the Potential.",
+
+      // Playful / Witty
+      "Look Past the Artex.",
+      "See Beyond the Magnolia.",
+      "Ignore the Carpets. We Did.",
+      "That Wallpaper Won't Be There Long.",
+      "Underneath That Avocado Bathroom...",
+      "What If the Previous Owners Had Taste?",
+      "A Doer-Upper's Best Friend.",
+      "For Those Who See Past the Listing Photos.",
+
+      // Direct / Confident
+      "Renovate Before You Buy.",
+      "Your Architect's First Draft.",
+      "Skip the Guesswork.",
+      "See the Finish Line First.",
+
+      // Evocative / Emotional
+      "Where Imagination Meets Square Footage.",
+      "Turn 'It Has Potential' Into Proof.",
+      "Make the Estate Agent's Lies Come True.",
+      "Because 'Needs Updating' Means Opportunity.",
+    ];
+
     // ============================================
     // COMPONENTS
     // ============================================
@@ -639,7 +671,10 @@
 
     // Loading message component with cycling witty messages
     function LoadingMessage() {
-      const [messageIndex, setMessageIndex] = useState(0);
+      // Start with a random message so users don't always see the same top 3
+      const [messageIndex, setMessageIndex] = useState(() =>
+        Math.floor(Math.random() * LOADING_MESSAGES.length)
+      );
       const [isVisible, setIsVisible] = useState(true);
 
       useEffect(() => {
@@ -658,6 +693,44 @@
         <p className={`text-linen-600 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           {LOADING_MESSAGES[messageIndex]}
         </p>
+      );
+    }
+
+    // Rotating headline component for homepage
+    function RotatingHeadline() {
+      const [currentIndex, setCurrentIndex] = useState(() =>
+        Math.floor(Math.random() * HOMEPAGE_HEADLINES.length)
+      );
+      const [isVisible, setIsVisible] = useState(true);
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setIsVisible(false); // fade out
+          setTimeout(() => {
+            // Pick a random different index (never same twice in a row)
+            setCurrentIndex(prev => {
+              let next;
+              do {
+                next = Math.floor(Math.random() * HOMEPAGE_HEADLINES.length);
+              } while (next === prev && HOMEPAGE_HEADLINES.length > 1);
+              return next;
+            });
+            setIsVisible(true); // fade in
+          }, 400); // wait for fade out to complete
+        }, 3000);
+
+        return () => clearInterval(interval);
+      }, []);
+
+      return (
+        <h1
+          className={`font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium min-h-[4.5rem] md:min-h-[5rem] flex items-center justify-center transition-opacity ${
+            isVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+          style={{ transitionDuration: '400ms' }}
+        >
+          {HOMEPAGE_HEADLINES[currentIndex]}
+        </h1>
       );
     }
 
@@ -1050,11 +1123,9 @@
             {/* Step 1: URL Input */}
             {step === 1 && (
               <div className="max-w-xl mx-auto text-center fade-in">
-                <h1 className="font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium">
-                  Visualise the<br /><em className="text-taupe">potential</em>
-                </h1>
+                <RotatingHeadline />
                 <p className="text-linen-600 text-lg mb-10 font-light">
-                  Paste a Rightmove listing and see what your renovation could look like.
+                  Paste a Rightmove link and watch potential step into the spotlight.
                 </p>
 
                 <div className="card rounded-2xl p-8">
@@ -1326,7 +1397,7 @@
             <div className="max-w-5xl mx-auto text-center text-sm text-linen-500">
               <p className="flex flex-col items-center gap-1">
                 <span>Powered by cutting-edge generative models.</span>
-                <span>Designed & built by Henry Wall.</span>
+                <span>Designed & built by Hal Wall Studios.</span>
               </p>
             </div>
           </footer>
