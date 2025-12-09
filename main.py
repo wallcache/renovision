@@ -182,7 +182,7 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     room_type_furniture = {
         'living': 'appropriate living room furniture like sofa, coffee table, ambient lighting',
         'bedroom': 'appropriate bedroom furniture like bed, bedside tables, soft lighting',
-        'kitchen': 'appropriate kitchen elements like updated cabinets, countertops, modern appliances',
+        'kitchen': 'appropriate kitchen elements like updated cabinets, countertops, modern appliances. DO NOT add a kitchen table unless the space very clearly supports a dining area or a table has been explicitly requested. Prioritise cabinet layout, flow, islands, peninsulas, and storage composition over dining furniture.',
         'dining': 'appropriate dining furniture like table and chairs, statement lighting',
         'bathroom': 'appropriate bathroom fixtures like updated vanity, modern taps, quality tiles',
         'office': 'appropriate office furniture like desk, ergonomic chair, task lighting',
@@ -193,9 +193,9 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Time of day lighting descriptions
     time_of_day_prompts = {
-        'day': 'bright natural daylight, crisp clean shadows',
-        'night': 'warm artificial lighting, cosy interior mood, soft ambient glow',
-        'golden_hour': 'warm cinematic golden hour lighting with glowing highlights',
+        'day': 'Bright daylight scene with soft natural light. Gentle sunlight entering through windows. Airy, balanced exposure. Shadows soft and minimal.',
+        'night': 'Dark exterior visible through windows. Shutters or blinds optionally partially closed. Interior illuminated with warm ambient lighting. Downlights and uplighting for atmospheric glow. Moody but comfortable evening lighting.',
+        'golden_hour': 'Strong warm golden sunlight streaming through windows. Defined light beams hitting interior surfaces. High contrast highlights and warm shadows. Distinct golden spill across walls, floors, and furniture. Cinematic warm glow with dramatic directional lighting.',
     }
 
     # Colour scheme palettes

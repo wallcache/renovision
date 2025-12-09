@@ -66,6 +66,12 @@
     .font-serif {
       font-family: 'Cormorant Garamond', Georgia, serif;
     }
+
+    /* Headline em tags styling */
+    h1 em {
+      font-style: italic;
+      font-weight: inherit;
+    }
     
     /* Subtle linen texture */
     .linen-texture {
@@ -494,38 +500,71 @@
       "Squeezing in a downstairs loo...",
       "Deciding the kitchen island is non-negotiable...",
       "Imagining what 'good bones' actually means...",
+      "Desperately Re-Aligning The Sofa With Better Chi...",
+      "Squinting Past The Fisheye Lens Distortion...",
+      "Translating \"Cosy\" Into Square-Foot Reality...",
+      "Blaming Bad Layouts On Blocked Qi...",
+      "Counting Plug Sockets Like It's A Sport...",
+      "Deciding That Moving One Door Could Heal Everything...",
+      "Mentally Removing Decades Of Bad Laminate...",
+      "Diagnosing \"Stagnant Energy\" In Windowless Toilets...",
+      "Arguing If The Staircase Is Stealing Our Fortune Luck...",
+      "Negotiating With Ourselves About Ceiling Heights...",
+      "Measuring Imaginary Islands In Tiny Kitchens...",
+      "Declaring Open-Plan Chaos \"Energetically Aggressive\"...",
+      "Deleting Virtual Feature Walls Aggressively...",
+      "Re-Aligning Bed Placement For Maximum Dream Potency...",
+      "Judging The Stairs For Creak Potential...",
+      "Worrying The Front Door Doesn't Welcome Prosperity Properly...",
+      "Deciding Which Walls Are Emotionally Load-Bearing...",
+      "Calculating Skylight-To-Daylight Ratios...",
+      "Imagining Plants Where Carpets Fear To Tread...",
+      "Dreaming Of Underfloor Heating While Standing On Lino...",
+      "Rotating Sofas That Don't Exist Yet...",
+      "Checking Sightlines For The Perfect Morning Coffee Spot...",
+      "Plotting The Demise Of The Shower-Over-Bath...",
+      "Evaluating Whether A Utility Room Is A Personality Trait...",
+      "Removing Fake Beams With Violent Enthusiasm...",
+      "Stepping Over Estate Agent Zoom Blur...",
+      "Prosecuting The Layout For Crimes Against Flow...",
+      "Re-Routing Imaginary Plumbing With Confidence...",
+      "Removing Chimney Breasts In Our Minds Already...",
+      "Visualising A Reading Nook In The Smallest Corner Possible...",
+      "Converting Box Rooms Into \"Studios\" (Emotionally)...",
+      "Playing \"Wall Or Structural Column?\" Roulette...",
+      "Forecasting How Many Skips We'll Need...",
+      "Assigning Vibes To Rooms We Haven't Built Yet...",
+      "Questioning Every Randomly Placed Radiator...",
+      "Planning Dramatic Pendant Lighting Moments...",
+      "Working Out If That Alcove Could House A Wine Fridge...",
+      "Rewriting \"Unique Layout\" As \"Chaotic Geometry\"...",
+      "Mentally Widening Hallways With Sheer Willpower...",
+      "Test-Fitting Future Christmas Trees Into Odd Rooms...",
     ];
 
     const HOMEPAGE_HEADLINES = [
-      // Refined / Aspirational
-      "See What This Place Could Become.",
-      "Discover What's Possible.",
-      "Find the Beauty in the Bones.",
-      "Every Room Has a Second Act.",
-      "Potential, Revealed.",
-      "Visualise the Potential.",
-
-      // Playful / Witty
-      "Look Past the Artex.",
-      "See Beyond the Magnolia.",
-      "Ignore the Carpets. We Did.",
-      "That Wallpaper Won't Be There Long.",
-      "Underneath That Avocado Bathroom...",
-      "What If the Previous Owners Had Taste?",
-      "A Doer-Upper's Best Friend.",
-      "For Those Who See Past the Listing Photos.",
-
-      // Direct / Confident
-      "Renovate Before You Buy.",
-      "Your Architect's First Draft.",
-      "Skip the Guesswork.",
-      "See the Finish Line First.",
-
-      // Evocative / Emotional
-      "Where Imagination Meets Square Footage.",
-      "Turn 'It Has Potential' Into Proof.",
-      "Make the Estate Agent's Lies Come True.",
-      "Because 'Needs Updating' Means Opportunity.",
+      "See What This Place Could <em>Become</em>.",
+      "Discover What's <em>Possible</em>.",
+      "Find the <em>Beauty</em> in the Bones.",
+      "Every Room Has a <em>Second</em> Act.",
+      "<em>Potential</em>, Revealed.",
+      "Look Past the <em>Artex</em>.",
+      "See Beyond the <em>Magnolia</em>.",
+      "Ignore the <em>Carpets</em>. We Did.",
+      "That <em>Wallpaper</em> Won't Be There Long.",
+      "Underneath That <em>Avocado</em> Bathroom...",
+      "What If the Previous Owners Had <em>Taste</em>?",
+      "A Doer-Upper's Best <em>Friend</em>.",
+      "For Those Who See Past the <em>Photos</em>.",
+      "<em>Renovate</em> Before You Buy.",
+      "Your Architect's First <em>Draft</em>.",
+      "Skip the <em>Guesswork</em>.",
+      "See the Finish <em>Line</em> First.",
+      "Where <em>Imagination</em> Meets Square Footage.",
+      "Turn 'It Has Potential' Into <em>Proof</em>.",
+      "Make the Estate Agent's <em>Lies</em> Come True.",
+      "Because 'Needs Updating' Means <em>Opportunity</em>.",
+      "Visualise the <em>Potential</em>.",
     ];
 
     // ============================================
@@ -696,41 +735,95 @@
       );
     }
 
-    // Rotating headline component for homepage
+    // Rotating headline component with typewriter animation
     function RotatingHeadline() {
       const [currentIndex, setCurrentIndex] = useState(() =>
         Math.floor(Math.random() * HOMEPAGE_HEADLINES.length)
       );
-      const [isVisible, setIsVisible] = useState(true);
+      const [displayedText, setDisplayedText] = useState('');
+      const [isTyping, setIsTyping] = useState(true);
+      const [opacity, setOpacity] = useState(1);
+      const typewriterTimeout = useRef(null);
+      const holdTimeout = useRef(null);
+      const fadeTimeout = useRef(null);
 
       useEffect(() => {
-        const interval = setInterval(() => {
-          setIsVisible(false); // fade out
-          setTimeout(() => {
-            // Pick a random different index (never same twice in a row)
-            setCurrentIndex(prev => {
-              let next;
-              do {
-                next = Math.floor(Math.random() * HOMEPAGE_HEADLINES.length);
-              } while (next === prev && HOMEPAGE_HEADLINES.length > 1);
-              return next;
-            });
-            setIsVisible(true); // fade in
-          }, 400); // wait for fade out to complete
-        }, 3000);
+        const fullText = HOMEPAGE_HEADLINES[currentIndex];
 
-        return () => clearInterval(interval);
-      }, []);
+        // Strip HTML tags to get plain text for typing
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = fullText;
+        const plainText = tempDiv.textContent || tempDiv.innerText || '';
+
+        let charIndex = 0;
+        setDisplayedText('');
+        setOpacity(1);
+        setIsTyping(true);
+
+        // Typewriter phase
+        const typeNextChar = () => {
+          if (charIndex < plainText.length) {
+            // Build displayed text by matching characters with original HTML
+            const currentPlainText = plainText.substring(0, charIndex + 1);
+
+            // Reconstruct with HTML by finding matching portion
+            let htmlText = '';
+            let plainIndex = 0;
+            let i = 0;
+
+            while (i < fullText.length && plainIndex < currentPlainText.length) {
+              if (fullText[i] === '<') {
+                // Copy HTML tag
+                const tagEnd = fullText.indexOf('>', i);
+                if (tagEnd !== -1) {
+                  htmlText += fullText.substring(i, tagEnd + 1);
+                  i = tagEnd + 1;
+                }
+              } else {
+                htmlText += fullText[i];
+                plainIndex++;
+                i++;
+              }
+            }
+
+            setDisplayedText(htmlText);
+            charIndex++;
+
+            const charDelay = 45 + Math.random() * 10; // 45-55ms
+            typewriterTimeout.current = setTimeout(typeNextChar, charDelay);
+          } else {
+            // Typing complete - hold phase
+            setIsTyping(false);
+            holdTimeout.current = setTimeout(() => {
+              // Fade out
+              setOpacity(0);
+              fadeTimeout.current = setTimeout(() => {
+                // Move to next headline
+                setCurrentIndex(prev => (prev + 1) % HOMEPAGE_HEADLINES.length);
+              }, 1000); // fade duration
+            }, 4000); // hold duration
+          }
+        };
+
+        typeNextChar();
+
+        return () => {
+          if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
+          if (holdTimeout.current) clearTimeout(holdTimeout.current);
+          if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
+        };
+      }, [currentIndex]);
 
       return (
         <h1
-          className={`font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium min-h-[4.5rem] md:min-h-[5rem] flex items-center justify-center transition-opacity ${
-            isVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{ transitionDuration: '400ms' }}
-        >
-          {HOMEPAGE_HEADLINES[currentIndex]}
-        </h1>
+          className="font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium flex items-center justify-center text-center"
+          style={{
+            minHeight: '8rem',
+            opacity: opacity,
+            transition: opacity < 1 ? 'opacity 1s ease-in-out' : 'none'
+          }}
+          dangerouslySetInnerHTML={{ __html: displayedText }}
+        />
       );
     }
 
@@ -770,6 +863,19 @@
       const containerRef = useRef(null);
       const [sliderPosition, setSliderPosition] = useState(50);
       const [isDragging, setIsDragging] = useState(false);
+      const [isTouching, setIsTouching] = useState(false);
+
+      const lockBodyScroll = useCallback(() => {
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+      }, []);
+
+      const unlockBodyScroll = useCallback(() => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+      }, []);
 
       const handleMove = useCallback((clientX) => {
         if (!containerRef.current) return;
@@ -781,14 +887,25 @@
 
       const handleMouseDown = () => setIsDragging(true);
       const handleMouseUp = () => setIsDragging(false);
-      
+
       const handleMouseMove = useCallback((e) => {
         if (isDragging) handleMove(e.clientX);
       }, [isDragging, handleMove]);
 
+      const handleTouchStart = useCallback((e) => {
+        setIsTouching(true);
+        lockBodyScroll();
+      }, [lockBodyScroll]);
+
       const handleTouchMove = useCallback((e) => {
+        e.preventDefault();
         handleMove(e.touches[0].clientX);
       }, [handleMove]);
+
+      const handleTouchEnd = useCallback((e) => {
+        setIsTouching(false);
+        unlockBodyScroll();
+      }, [unlockBodyScroll]);
 
       useEffect(() => {
         document.addEventListener('mouseup', handleMouseUp);
@@ -799,24 +916,34 @@
         };
       }, [handleMouseMove]);
 
+      // Cleanup body scroll lock on unmount
+      useEffect(() => {
+        return () => {
+          unlockBodyScroll();
+        };
+      }, [unlockBodyScroll]);
+
       return (
-        <div 
+        <div
           ref={containerRef}
           className="comparison-slider rounded-2xl overflow-hidden card"
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
           onDragStart={(e) => e.preventDefault()}
         >
           <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
-          
-          <div 
+
+          <div
             className="comparison-after"
             style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
           >
             <img src={afterSrc} alt="After" className="w-full" draggable="false" />
           </div>
-          
-          <div 
+
+          <div
             className="comparison-handle"
             style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
           >
@@ -827,7 +954,7 @@
               </svg>
             </div>
           </div>
-          
+
           <div className="absolute bottom-4 left-4 bg-linen-900/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-linen-100">
             After
           </div>
@@ -1397,7 +1524,7 @@
             <div className="max-w-5xl mx-auto text-center text-sm text-linen-500">
               <p className="flex flex-col items-center gap-1">
                 <span>Powered by cutting-edge generative models.</span>
-                <span>Designed & built by Hal Wall Studios.</span>
+                <span>Designed & built by Wallcache Studios.</span>
               </p>
             </div>
           </footer>
