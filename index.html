@@ -711,6 +711,43 @@
       "A velvet armchair that looks cozy but only for aristocrats or poets...",
       "A floor lamp bending slightly as if bowing in reverence...",
       "A faint smell of old books and chocolate drifting from nowhere...",
+      "A vintage typewriter on the desk with a half-written letter stuck in it...",
+      "A collection of succulents arranged like tiny architectural models...",
+      "A brass bar cart stocked with decanters that catch the light beautifully...",
+      "A Persian rug that's seen better days but tells better stories...",
+      "A window seat piled with cushions begging for afternoon naps...",
+      "A gallery wall of black and white photographs in mismatched frames...",
+      "A freestanding bathtub positioned for optimal daydreaming...",
+      "A kitchen island with stools that make you want to linger over coffee...",
+      "A reading lamp angled perfectly for late-night page turning...",
+      "A collection of vintage cameras displayed like sculpture...",
+      "A velvet ottoman in an impractical but gorgeous jewel tone...",
+      "A marble coffee table that doubles as an altar to good taste...",
+      "A macramé wall hanging that somehow doesn't look like 1970s suburbia...",
+      "A fireplace mantel styled with candlesticks and curiosities...",
+      "A brass umbrella stand that's never actually held an umbrella...",
+      "A library ladder on rails because why not live the fantasy...",
+      "A drinks trolley with vintage glassware catching rainbow light...",
+      "A statement armchair in burnt orange that demands attention...",
+      "A collection of art books stacked horizontally as accent pieces...",
+      "A terrarium ecosystem thriving in a glass cloche...",
+      "A vintage mirror with foxed glass adding character to every reflection...",
+      "A daybed piled with throws for maximum lounging potential...",
+      "A kitchen shelf displaying colorful Le Creuset like a rainbow...",
+      "A brass desk lamp with a green shade giving off detective novel vibes...",
+      "A ceramic garden stool doubling as a side table because versatility...",
+      "A collection of vintage botanical prints in gilt frames...",
+      "A sheepskin throw draped artfully over the back of a chair...",
+      "A bar of brass picture lights illuminating imaginary masterpieces...",
+      "A vintage globe showing countries that no longer exist...",
+      "A ceramic vase collection in graduated heights creating rhythm...",
+      "A stack of vintage suitcases repurposed as quirky storage...",
+      "A brass tension rod with plants cascading down like a living curtain...",
+      "A mid-century credenza hiding all the chaos inside its sleek doors...",
+      "A collection of brass candlesticks in varying heights for drama...",
+      "A vintage apothecary cabinet with tiny drawers full of mysteries...",
+      "A sheepskin rug making even cold floors feel inviting...",
+      "A drinks tray on the coffee table suggesting sophisticated evenings ahead...",
     ];
 
     // ============================================
@@ -1123,6 +1160,7 @@
       const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(() =>
         Math.floor(Math.random() * EXTRA_NOTES_PLACEHOLDERS.length)
       );
+      const previousIndexRef = useRef(-1);
       const [showHint, setShowHint] = useState(false);
       const [isMobile, setIsMobile] = useState(false);
       const typewriterTimeout = useRef(null);
@@ -1131,6 +1169,16 @@
       const textareaRef = useRef(null);
       const touchStartX = useRef(0);
       const touchStartY = useRef(0);
+
+      // Function to get a random index that's different from the previous one
+      const getRandomIndex = useCallback(() => {
+        let newIndex;
+        do {
+          newIndex = Math.floor(Math.random() * EXTRA_NOTES_PLACEHOLDERS.length);
+        } while (newIndex === previousIndexRef.current && EXTRA_NOTES_PLACEHOLDERS.length > 1);
+        previousIndexRef.current = newIndex;
+        return newIndex;
+      }, []);
 
       // Detect mobile device
       useEffect(() => {
@@ -1211,11 +1259,11 @@
               // Fade out
               setPlaceholderOpacity(0);
               setShowHint(false);
-              // Wait 40ms after fade, then move to next
+              // Wait 40ms after fade, then move to random next
               fadeTimeout.current = setTimeout(() => {
                 setPlaceholder('');
                 setPlaceholderOpacity(1);
-                setCurrentSuggestionIndex((prev) => (prev + 1) % EXTRA_NOTES_PLACEHOLDERS.length);
+                setCurrentSuggestionIndex(getRandomIndex());
               }, 40);
             }, 2000); // 2 second pause before fade
           }
@@ -1231,7 +1279,7 @@
           if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
           if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
         };
-      }, [currentSuggestionIndex, value]);
+      }, [currentSuggestionIndex, value, getRandomIndex]);
 
       return (
         <div className="mb-8 mt-8 relative">
