@@ -182,7 +182,7 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     room_type_furniture = {
         'living': 'appropriate living room furniture like sofa, coffee table, ambient lighting',
         'bedroom': 'appropriate bedroom furniture like bed, bedside tables, soft lighting',
-        'kitchen': 'appropriate kitchen elements like updated cabinets, countertops, modern appliances. DO NOT add a kitchen table unless the space very clearly supports a dining area or a table has been explicitly requested. Prioritise cabinet layout, flow, islands, peninsulas, and storage composition over dining furniture.',
+        'kitchen': 'appropriate kitchen elements like updated cabinets, countertops, modern appliances. Only add a kitchen island if there is sufficient space. If no space for an island, try a peninsula. If no space for either, keep as a galley or simple layout with no kitchen table. Prioritise cabinet layout, flow, and storage composition.',
         'dining': 'appropriate dining furniture like table and chairs, statement lighting',
         'bathroom': 'appropriate bathroom fixtures like updated vanity, modern taps, quality tiles',
         'office': 'appropriate office furniture like desk, ergonomic chair, task lighting',
@@ -218,6 +218,7 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'tiled': 'large format ceramic or porcelain tiles',
         'stone_slabs': 'natural stone slab flooring',
         'polished_concrete': 'polished concrete floors with subtle sheen',
+        'carpetted': 'high-quality carpeted flooring with plush texture',
     }
     
     # Build the prompt - FOCUS ON EDITING, NOT GENERATING

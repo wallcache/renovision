@@ -66,12 +66,6 @@
     .font-serif {
       font-family: 'Cormorant Garamond', Georgia, serif;
     }
-
-    /* Headline em tags styling */
-    h1 em {
-      font-style: italic;
-      font-weight: inherit;
-    }
     
     /* Subtle linen texture */
     .linen-texture {
@@ -177,7 +171,7 @@
       border-radius: 0.75rem;
       cursor: pointer;
       margin-bottom: 0.5rem;
-      transition: all 0.2s ease;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle-group-header:hover {
@@ -193,7 +187,7 @@
     }
 
     .toggle-group-header .chevron {
-      transition: transform 0.3s ease;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       color: #a89f93;
     }
 
@@ -203,7 +197,7 @@
 
     .toggle-group-content {
       overflow: hidden;
-      transition: max-height 0.3s ease, opacity 0.25s ease;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .toggle-group-content.collapsed {
@@ -212,7 +206,7 @@
     }
 
     .toggle-group-content.expanded {
-      max-height: 500px;
+      max-height: 600px;
       opacity: 1;
       padding-bottom: 1rem;
     }
@@ -285,6 +279,8 @@
       -webkit-user-select: none;
       -moz-user-select: none;
       -ms-user-select: none;
+      touch-action: none;
+      -webkit-touch-callout: none;
     }
     
     .comparison-slider img {
@@ -473,6 +469,7 @@
       { id: 'tiled', label: 'Tiled' },
       { id: 'stone_slabs', label: 'Stone Slabs' },
       { id: 'polished_concrete', label: 'Polished Concrete' },
+      { id: 'carpetted', label: 'Carpetted' },
     ];
 
     const LOADING_MESSAGES = [
@@ -480,10 +477,10 @@
       "Knocking through a wall or two...",
       "Arguing with the listed building officer...",
       "Convincing the neighbours about the extension...",
-      "Sourcing reclaimed Victorian floorboards...",
+      "Sourcing reclaimed victorian floorboards...",
       "Haggling at the antique market...",
       "Pretending to understand load-bearing walls...",
-      "Googling 'is Farrow & Ball worth it'...",
+      "Googling 'is farrow & ball worth it'...",
       "Adding another velvet sofa...",
       "Removing the previous owner's wallpaper choices...",
       "Manifesting off-street parking...",
@@ -493,78 +490,151 @@
       "Hiding the boiler somewhere clever...",
       "Making the most of the 'cosy' proportions...",
       "Explaining 'open-plan living' to a 1930s semi...",
-      "Choosing between Hague Blue and Stiffkey Blue...",
+      "Choosing between hague blue and stiffkey blue...",
       "Measuring twice, cutting once...",
       "Persuading the mortgage lender it's 'characterful'...",
       "Adding a boot room no one asked for...",
       "Squeezing in a downstairs loo...",
       "Deciding the kitchen island is non-negotiable...",
       "Imagining what 'good bones' actually means...",
-      "Desperately Re-Aligning The Sofa With Better Chi...",
-      "Squinting Past The Fisheye Lens Distortion...",
-      "Translating \"Cosy\" Into Square-Foot Reality...",
-      "Blaming Bad Layouts On Blocked Qi...",
-      "Counting Plug Sockets Like It's A Sport...",
-      "Deciding That Moving One Door Could Heal Everything...",
-      "Mentally Removing Decades Of Bad Laminate...",
-      "Diagnosing \"Stagnant Energy\" In Windowless Toilets...",
-      "Arguing If The Staircase Is Stealing Our Fortune Luck...",
-      "Negotiating With Ourselves About Ceiling Heights...",
-      "Measuring Imaginary Islands In Tiny Kitchens...",
-      "Declaring Open-Plan Chaos \"Energetically Aggressive\"...",
-      "Deleting Virtual Feature Walls Aggressively...",
-      "Re-Aligning Bed Placement For Maximum Dream Potency...",
-      "Judging The Stairs For Creak Potential...",
-      "Worrying The Front Door Doesn't Welcome Prosperity Properly...",
-      "Deciding Which Walls Are Emotionally Load-Bearing...",
-      "Calculating Skylight-To-Daylight Ratios...",
-      "Imagining Plants Where Carpets Fear To Tread...",
-      "Dreaming Of Underfloor Heating While Standing On Lino...",
-      "Rotating Sofas That Don't Exist Yet...",
-      "Checking Sightlines For The Perfect Morning Coffee Spot...",
-      "Plotting The Demise Of The Shower-Over-Bath...",
-      "Evaluating Whether A Utility Room Is A Personality Trait...",
-      "Removing Fake Beams With Violent Enthusiasm...",
-      "Stepping Over Estate Agent Zoom Blur...",
-      "Prosecuting The Layout For Crimes Against Flow...",
-      "Re-Routing Imaginary Plumbing With Confidence...",
-      "Removing Chimney Breasts In Our Minds Already...",
-      "Visualising A Reading Nook In The Smallest Corner Possible...",
-      "Converting Box Rooms Into \"Studios\" (Emotionally)...",
-      "Playing \"Wall Or Structural Column?\" Roulette...",
-      "Forecasting How Many Skips We'll Need...",
-      "Assigning Vibes To Rooms We Haven't Built Yet...",
-      "Questioning Every Randomly Placed Radiator...",
-      "Planning Dramatic Pendant Lighting Moments...",
-      "Working Out If That Alcove Could House A Wine Fridge...",
-      "Rewriting \"Unique Layout\" As \"Chaotic Geometry\"...",
-      "Mentally Widening Hallways With Sheer Willpower...",
-      "Test-Fitting Future Christmas Trees Into Odd Rooms...",
+      "Desperately re-aligning the sofa with better chi...",
+      "Squinting past the fisheye lens distortion...",
+      "Translating 'cosy' into square-foot reality...",
+      "Blaming bad layouts on blocked qi...",
+      "Counting plug sockets like it's a sport...",
+      "Deciding that moving one door could heal everything...",
+      "Mentally removing decades of bad laminate...",
+      "Diagnosing 'stagnant energy' in windowless toilets...",
+      "Arguing if the staircase is stealing our fortune luck...",
+      "Negotiating with ourselves about ceiling heights...",
+      "Measuring imaginary islands in tiny kitchens...",
+      "Declaring open-plan chaos 'energetically aggressive'...",
+      "Deleting virtual feature walls aggressively...",
+      "Re-aligning bed placement for maximum dream potency...",
+      "Judging the stairs for creak potential...",
+      "Worrying the front door doesn't welcome prosperity properly...",
+      "Deciding which walls are emotionally load-bearing...",
+      "Calculating skylight-to-daylight ratios...",
+      "Imagining plants where carpets fear to tread...",
+      "Dreaming of underfloor heating while standing on lino...",
+      "Rotating sofas that don't exist yet...",
+      "Checking sightlines for the perfect morning coffee spot...",
+      "Plotting the demise of the shower-over-bath...",
+      "Evaluating whether a utility room is a personality trait...",
+      "Removing fake beams with violent enthusiasm...",
+      "Stepping over estate agent zoom blur...",
+      "Prosecuting the layout for crimes against flow...",
+      "Re-routing imaginary plumbing with confidence...",
+      "Removing chimney breasts in our minds already...",
+      "Visualising a reading nook in the smallest corner possible...",
+      "Converting box rooms into 'studios' (emotionally)...",
+      "Playing 'wall or structural column?' roulette...",
+      "Forecasting how many skips we'll need...",
+      "Assigning vibes to rooms we haven't built yet...",
+      "Questioning every randomly placed radiator...",
+      "Planning dramatic pendant lighting moments...",
+      "Working out if that alcove could house a wine fridge...",
+      "Rewriting 'unique layout' as 'chaotic geometry'...",
+      "Mentally widening hallways with sheer willpower...",
+      "Test-fitting future christmas trees into odd rooms...",
     ];
 
     const HOMEPAGE_HEADLINES = [
-      "See What This Place Could <em>Become</em>.",
-      "Discover What's <em>Possible</em>.",
-      "Find the <em>Beauty</em> in the Bones.",
-      "Every Room Has a <em>Second</em> Act.",
-      "<em>Potential</em>, Revealed.",
-      "Look Past the <em>Artex</em>.",
-      "See Beyond the <em>Magnolia</em>.",
-      "Ignore the <em>Carpets</em>. We Did.",
-      "That <em>Wallpaper</em> Won't Be There Long.",
-      "Underneath That <em>Avocado</em> Bathroom...",
-      "What If the Previous Owners Had <em>Taste</em>?",
-      "A Doer-Upper's Best <em>Friend</em>.",
-      "For Those Who See Past the <em>Photos</em>.",
-      "<em>Renovate</em> Before You Buy.",
-      "Your Architect's First <em>Draft</em>.",
-      "Skip the <em>Guesswork</em>.",
-      "See the Finish <em>Line</em> First.",
-      "Where <em>Imagination</em> Meets Square Footage.",
-      "Turn 'It Has Potential' Into <em>Proof</em>.",
-      "Make the Estate Agent's <em>Lies</em> Come True.",
-      "Because 'Needs Updating' Means <em>Opportunity</em>.",
-      "Visualise the <em>Potential</em>.",
+      "See What This Place Could Become.",
+      "Discover What's Possible.",
+      "Find The Beauty In The Bones.",
+      "Every Room Has A Second Act.",
+      "Potential, Revealed.",
+      "Look Past The Artex.",
+      "See Beyond The Magnolia.",
+      "Ignore The Carpets. We Did.",
+      "That Wallpaper Won't Be There Long.",
+      "Underneath That Avocado Bathroom...",
+      "What If The Previous Owners Had Taste?",
+      "A Doer-Upper's Best Friend.",
+      "For Those Who See Past The Photos.",
+      "Renovate Before You Buy.",
+      "Your Architect's First Draft.",
+      "Skip The Guesswork.",
+      "See The Finish Line First.",
+      "Where Imagination Meets Square Footage.",
+      "Turn 'It Has Potential' Into Proof.",
+      "Make The Estate Agent's Lies Come True.",
+      "Because 'Needs Updating' Means Opportunity.",
+      "Visualise The Potential.",
+    ];
+
+    const HOMEPAGE_SUBTITLES = [
+      "Drop a property link and let possibility take centre stage.",
+      "Paste a link, and watch potential unfurl like a well-cut curtain.",
+      "Enter a property link, and behold the drama of what could be.",
+      "Share a link, and let imagination do the heavy lifting.",
+      "Paste a property, and let opportunity strike a pose.",
+      "Submit a link, and watch ordinary rooms learn extraordinary tricks.",
+      "Give us a link, and let potential have its moment in the spotlight.",
+    ];
+
+    const EXTRA_NOTES_PLACEHOLDERS = [
+      "Pop a Keith Haring on that wall, your sofa will thank you",
+      "A Togo in neon orange might clash gloriously with that rug",
+      "Imagine a Labradoodle sprawled on the velvet armchair",
+      "Maybe a gold-trimmed mirror that makes your hallway look heroic",
+      "Hang a disco ball above the kitchen island, why not",
+      "Scatter cushions like confetti on the sofa, bold and unapologetic",
+      "A stack of mid-century coffee table books, just begging to be spilled",
+      "Put a tiny cactus army on the windowsill",
+      "Maybe a velvet pouf where nobody will sit but it looks fabulous",
+      "Brass taps in the kitchen that scream, \"I'm worth it\"",
+      "A neon sign saying \"Dinner Served?\" above the stove",
+      "A potted palm in the corner like it owns the place",
+      "Add a geometric rug so sharp it could cut feelings",
+      "A vintage record player with jazz spilling like spilled wine",
+      "A framed dog portrait, bonus points if it's wearing sunglasses",
+      "Floor cushions in crazy prints for impromptu dance-offs",
+      "A statement pendant light that doubles as a conversation starter",
+      "Some mismatched chairs around the table, chaos looks chic",
+      "A little gold statue that nobody knows the origin of",
+      "Hang a map with pins where you've never been",
+      "A velvet headboard so dramatic it deserves its own theme song",
+      "A neon flamingo lamp because subtle is overrated",
+      "A beanbag in the reading nook for dramatic lounging",
+      "An oversized clock that looks like it belongs in a Wes Anderson film",
+      "Throw in a basket of ridiculously fluffy throws, because why not",
+      "A single monstera leaf in a glass vase, majestically lonely",
+      "A tiny dog bowl in designer chic, just for laughs",
+      "A coffee table that doubles as a mini gallery of oddities",
+      "A bright wallpaper corner no one can resist photographing",
+      "A chandelier above the bed for your inner royalty to thrive",
+      "Imagine a velvet chaise for napping while pondering the futility of existence...",
+      "A gilt-framed portrait of a cat judging your life choices...",
+      "Scatter books like breadcrumbs, leading to some secret philosophical revelation...",
+      "A single candle burning next to a half-empty glass of wine...",
+      "An antique globe with pins in countries you've only dreamed of visiting...",
+      "A brass telescope pointing out the window to nowhere in particular...",
+      "A velvet footstool that doubles as a throne for your inner aristocrat...",
+      "A neon sign that says \"Why Not?\" blinking at random intervals...",
+      "A Labrador in a cashmere sweater lying on a Persian rug...",
+      "A chandelier so flamboyant it demands applause from the furniture...",
+      "A tiny bonsai in the corner contemplating its own mortality...",
+      "A Togo sofa in shocking pink, unapologetically clashing with the walls...",
+      "Floor cushions arranged like they've hosted secret salons...",
+      "A golden pineapple that refuses to be ignored...",
+      "A fireplace mantel decorated with absurdly ornate clocks ticking at their own pace...",
+      "A throw so fluffy it could smother small existential dread...",
+      "A single, dramatic velvet curtain blowing slightly, as if sighing...",
+      "A vintage gramophone playing jazz only when nobody is looking...",
+      "A coffee table with a hidden drawer full of scandalous secrets...",
+      "A staircase lined with tiny portraits of eccentric ancestors...",
+      "A teacup on a saucer perched precariously, like a statement of rebellion...",
+      "A massive potted palm pretending it owns the room...",
+      "An oversized mirror angled to reflect all the wrong angles beautifully...",
+      "A single pendant light casting shadows that look suspiciously like dancing...",
+      "A rug that seems to whisper \"sit here, contemplate life\"...",
+      "A stack of mismatched cushions that would survive the apocalypse...",
+      "A tiny sculpture holding a wine glass, silently judging guests...",
+      "A velvet armchair that looks cozy but only for aristocrats or poets...",
+      "A floor lamp bending slightly as if bowing in reverence...",
+      "A faint smell of old books and chocolate drifting from nowhere...",
     ];
 
     // ============================================
@@ -622,9 +692,9 @@
 
     function AccordionToggleGroup({ label, options, value, onChange, isOpen, onToggle, useColourSwatches }) {
       const getSelectedLabel = () => {
-        if (!value) return 'Choose...';
+        if (!value) return '';
         const option = options.find(o => o.id === value);
-        return option ? option.label : 'Choose...';
+        return option ? option.label : '';
       };
 
       return (
@@ -635,10 +705,12 @@
           >
             <div>
               <div className="text-sm font-medium text-linen-800">{label}</div>
-              <div className="selected-value">
-                {value && <span>✓</span>}
-                <span>{getSelectedLabel()}</span>
-              </div>
+              {value && (
+                <div className="selected-value">
+                  <span>✓</span>
+                  <span>{getSelectedLabel()}</span>
+                </div>
+              )}
             </div>
             <svg
               className="chevron"
@@ -735,82 +807,58 @@
       );
     }
 
-    // Rotating headline component with typewriter animation
+    // Rotating headline component with typewriter in and out animation
     function RotatingHeadline() {
       const [currentIndex, setCurrentIndex] = useState(() =>
         Math.floor(Math.random() * HOMEPAGE_HEADLINES.length)
       );
       const [displayedText, setDisplayedText] = useState('');
-      const [isTyping, setIsTyping] = useState(true);
-      const [opacity, setOpacity] = useState(1);
+      const [isTypingIn, setIsTypingIn] = useState(true);
       const typewriterTimeout = useRef(null);
       const holdTimeout = useRef(null);
-      const fadeTimeout = useRef(null);
 
       useEffect(() => {
         const fullText = HOMEPAGE_HEADLINES[currentIndex];
-
-        // Strip HTML tags to get plain text for typing
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = fullText;
-        const plainText = tempDiv.textContent || tempDiv.innerText || '';
-
         let charIndex = 0;
+
         setDisplayedText('');
-        setOpacity(1);
-        setIsTyping(true);
+        setIsTypingIn(true);
 
-        // Typewriter phase
-        const typeNextChar = () => {
-          if (charIndex < plainText.length) {
-            // Build displayed text by matching characters with original HTML
-            const currentPlainText = plainText.substring(0, charIndex + 1);
-
-            // Reconstruct with HTML by finding matching portion
-            let htmlText = '';
-            let plainIndex = 0;
-            let i = 0;
-
-            while (i < fullText.length && plainIndex < currentPlainText.length) {
-              if (fullText[i] === '<') {
-                // Copy HTML tag
-                const tagEnd = fullText.indexOf('>', i);
-                if (tagEnd !== -1) {
-                  htmlText += fullText.substring(i, tagEnd + 1);
-                  i = tagEnd + 1;
-                }
-              } else {
-                htmlText += fullText[i];
-                plainIndex++;
-                i++;
-              }
-            }
-
-            setDisplayedText(htmlText);
+        // Type in phase
+        const typeIn = () => {
+          if (charIndex < fullText.length) {
+            setDisplayedText(fullText.substring(0, charIndex + 1));
             charIndex++;
-
             const charDelay = 45 + Math.random() * 10; // 45-55ms
-            typewriterTimeout.current = setTimeout(typeNextChar, charDelay);
+            typewriterTimeout.current = setTimeout(typeIn, charDelay);
           } else {
-            // Typing complete - hold phase
-            setIsTyping(false);
+            // Typing in complete - hold phase
             holdTimeout.current = setTimeout(() => {
-              // Fade out
-              setOpacity(0);
-              fadeTimeout.current = setTimeout(() => {
-                // Move to next headline
-                setCurrentIndex(prev => (prev + 1) % HOMEPAGE_HEADLINES.length);
-              }, 1000); // fade duration
+              // Start typing out
+              setIsTypingIn(false);
+              typeOut();
             }, 4000); // hold duration
           }
         };
 
-        typeNextChar();
+        // Type out phase (reverse)
+        const typeOut = () => {
+          if (charIndex > 0) {
+            charIndex--;
+            setDisplayedText(fullText.substring(0, charIndex));
+            const charDelay = 25 + Math.random() * 10; // 25-35ms (faster out)
+            typewriterTimeout.current = setTimeout(typeOut, charDelay);
+          } else {
+            // Typing out complete - move to next headline
+            setCurrentIndex(prev => (prev + 1) % HOMEPAGE_HEADLINES.length);
+          }
+        };
+
+        typeIn();
 
         return () => {
           if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
           if (holdTimeout.current) clearTimeout(holdTimeout.current);
-          if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
         };
       }, [currentIndex]);
 
@@ -818,12 +866,11 @@
         <h1
           className="font-serif text-5xl md:text-6xl text-linen-900 mb-4 font-medium flex items-center justify-center text-center"
           style={{
-            minHeight: '8rem',
-            opacity: opacity,
-            transition: opacity < 1 ? 'opacity 1s ease-in-out' : 'none'
+            minHeight: '8rem'
           }}
-          dangerouslySetInnerHTML={{ __html: displayedText }}
-        />
+        >
+          {displayedText}
+        </h1>
       );
     }
 
@@ -864,17 +911,36 @@
       const [sliderPosition, setSliderPosition] = useState(50);
       const [isDragging, setIsDragging] = useState(false);
       const [isTouching, setIsTouching] = useState(false);
+      const scrollPosition = useRef(0);
 
       const lockBodyScroll = useCallback(() => {
+        // Save current scroll position
+        scrollPosition.current = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Lock scroll on body
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollPosition.current}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
         document.body.style.width = '100%';
+
+        // Additional iOS Safari fix
+        document.documentElement.style.overflow = 'hidden';
       }, []);
 
       const unlockBodyScroll = useCallback(() => {
+        // Restore scroll
         document.body.style.overflow = '';
         document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
         document.body.style.width = '';
+        document.documentElement.style.overflow = '';
+
+        // Restore scroll position
+        window.scrollTo(0, scrollPosition.current);
       }, []);
 
       const handleMove = useCallback((clientX) => {
@@ -895,14 +961,21 @@
       const handleTouchStart = useCallback((e) => {
         setIsTouching(true);
         lockBodyScroll();
+        // Don't prevent default on touchStart to allow other interactions
       }, [lockBodyScroll]);
 
       const handleTouchMove = useCallback((e) => {
-        e.preventDefault();
-        handleMove(e.touches[0].clientX);
-      }, [handleMove]);
+        if (isTouching || e.touches.length > 0) {
+          // Prevent default to stop page scrolling
+          if (e.cancelable) {
+            e.preventDefault();
+          }
+          e.stopPropagation();
+          handleMove(e.touches[0].clientX);
+        }
+      }, [handleMove, isTouching]);
 
-      const handleTouchEnd = useCallback((e) => {
+      const handleTouchEnd = useCallback(() => {
         setIsTouching(false);
         unlockBodyScroll();
       }, [unlockBodyScroll]);
@@ -965,6 +1038,72 @@
       );
     }
 
+    // Animated textarea component with typewriter placeholder
+    function AnimatedTextarea({ value, onChange, label, sublabel }) {
+      const [placeholder, setPlaceholder] = useState('');
+      const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(() =>
+        Math.floor(Math.random() * EXTRA_NOTES_PLACEHOLDERS.length)
+      );
+      const typewriterTimeout = useRef(null);
+      const pauseTimeout = useRef(null);
+
+      useEffect(() => {
+        // Only animate placeholder when textarea is empty
+        if (value && value.trim().length > 0) {
+          setPlaceholder('');
+          if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
+          if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
+          return;
+        }
+
+        const currentText = EXTRA_NOTES_PLACEHOLDERS[currentSuggestionIndex];
+        let charIndex = 0;
+
+        const typeIn = () => {
+          if (charIndex < currentText.length) {
+            setPlaceholder(currentText.substring(0, charIndex + 1));
+            charIndex++;
+            const delay = 30 + Math.random() * 20; // 30-50ms per char
+            typewriterTimeout.current = setTimeout(typeIn, delay);
+          } else {
+            // Finished typing - pause before moving to next
+            pauseTimeout.current = setTimeout(() => {
+              // Clear and move to next suggestion
+              setPlaceholder('');
+              setCurrentSuggestionIndex((prev) => (prev + 1) % EXTRA_NOTES_PLACEHOLDERS.length);
+            }, 3000); // 3 second pause
+          }
+        };
+
+        // Start typing after a brief delay
+        pauseTimeout.current = setTimeout(() => {
+          typeIn();
+        }, 500);
+
+        return () => {
+          if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
+          if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
+        };
+      }, [currentSuggestionIndex, value]);
+
+      return (
+        <div className="mb-8 mt-8">
+          <label className="block text-sm font-medium text-linen-700 mb-1">
+            {label}
+          </label>
+          {sublabel && (
+            <p className="text-xs text-linen-500 mb-3">{sublabel}</p>
+          )}
+          <textarea
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            className="input-field resize-none h-28"
+          />
+        </div>
+      );
+    }
+
     // ============================================
     // MAIN APP
     // ============================================
@@ -974,6 +1113,9 @@
       const [rightmoveUrl, setRightmoveUrl] = useState('');
       const [isLoading, setIsLoading] = useState(false);
       const [error, setError] = useState(null);
+      const [homepageSubtitle] = useState(() =>
+        HOMEPAGE_SUBTITLES[Math.floor(Math.random() * HOMEPAGE_SUBTITLES.length)]
+      );
       
       const [propertyInfo, setPropertyInfo] = useState(null);
       const [propertyImages, setPropertyImages] = useState([]);
@@ -1120,7 +1262,8 @@
           setPropertyImages(images);
           setIsLoading(false);
           setStep(2);
-          
+          window.scrollTo(0, 0);
+
         } catch (err) {
           setError(err.message);
           setIsLoading(false);
@@ -1131,6 +1274,7 @@
         setSelectedImage(image);
         setActiveToggleId('room'); // Start with Room Type open
         setStep(3);
+        window.scrollTo(0, 0);
       };
 
       const generateRenovation = async () => {
@@ -1139,6 +1283,7 @@
         setIsLoading(true);
         setError(null);
         setStep(4);
+        window.scrollTo(0, 0);
 
         try {
           const response = await fetch(`${API_BASE_URL}/renovate`, {
@@ -1252,7 +1397,7 @@
               <div className="max-w-xl mx-auto text-center fade-in">
                 <RotatingHeadline />
                 <p className="text-linen-600 text-lg mb-10 font-light">
-                  Paste a Rightmove link and watch potential step into the spotlight.
+                  {homepageSubtitle}
                 </p>
 
                 <div className="card rounded-2xl p-8">
@@ -1322,14 +1467,11 @@
                       onClick={() => handleImageSelect(image)}
                       className="image-card rounded-xl overflow-hidden card-hover aspect-[4/3]"
                     >
-                      <img 
-                        src={image.url} 
+                      <img
+                        src={image.url}
                         alt="Property image"
                         className="w-full h-full object-cover"
                       />
-                      <div className="select-hint absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-linen-900/70 to-transparent opacity-0 transform translate-y-2 transition-all">
-                        <span className="text-linen-50 text-sm font-medium">Select</span>
-                      </div>
                     </div>
                   ))}
                 </div>
@@ -1362,7 +1504,7 @@
                   
                   <div>
                     <h2 className="font-serif text-3xl text-linen-900 mb-2">Configure your renovation</h2>
-                    <p className="text-linen-600 mb-8">All options are optional. Leave blank for AI defaults.</p>
+                    <p className="text-linen-600 mb-8">Options, like dinner guests, may be politely ignored.</p>
 
                     <AccordionToggleGroup
                       label="Room Type"
@@ -1414,18 +1556,12 @@
                       </>
                     )}
                     
-                    <div className="mb-8 mt-8">
-                      <label className="block text-sm font-medium text-linen-700 mb-1">
-                        Extra Notes
-                      </label>
-                      <p className="text-xs text-linen-500 mb-3">Be as specific as you like</p>
-                      <textarea
-                        value={extraNotes}
-                        onChange={(e) => setExtraNotes(e.target.value)}
-                        placeholder="e.g., 'Velvet emerald sofa', 'Brass fixtures throughout', 'Keep the fireplace as a focal point'..."
-                        className="input-field resize-none h-28"
-                      />
-                    </div>
+                    <AnimatedTextarea
+                      value={extraNotes}
+                      onChange={(e) => setExtraNotes(e.target.value)}
+                      label="Extra Notes"
+                      sublabel="Be as specific as you like"
+                    />
                     
                     <CheckboxToggle
                       label="Auto-download generated image"
