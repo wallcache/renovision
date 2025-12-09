@@ -104,8 +104,9 @@ class RenovationRequest(BaseModel):
     room_type: Optional[str] = None  # living, bedroom, kitchen, dining, bathroom, office, hallway, garden, outdoor
     # Optional configuration toggles
     time_of_day: Optional[str] = None  # day, night, golden_hour
-    colour_scheme: Optional[str] = None  # white, black, charcoal, navy, teal, forest_green, olive, mustard, terracotta, burgundy
-    flooring: Optional[str] = None  # wood_parquet, tiled, stone_slabs, polished_concrete
+    colour_scheme: Optional[str] = None  # Full ROYGBIV spectrum + neutrals
+    flooring: Optional[str] = None  # wood_parquet, tiled, stone_slabs, polished_concrete, carpetted
+    wallpaper: Optional[str] = None  # floral, geometric, striped, damask, botanical
     extra_notes: Optional[str] = None
     auto_download: Optional[bool] = False
 
@@ -193,23 +194,54 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Time of day lighting descriptions - DRAMATIC and CLEARLY PERCEPTIBLE changes
     time_of_day_prompts = {
-        'day': 'DAYLIGHT SCENE: If exterior sky is visible through windows, make it BRIGHT BLUE DAYLIGHT SKY with white clouds. Interior lighting must be BRIGHT, AIRY, and NATURALLY LIT with soft even illumination throughout. Shadows are soft and minimal. The entire scene should feel fresh, open, and daytime-bright. NO warm tones - keep lighting cool and natural like midday sun.',
-        'night': 'NIGHT SCENE: If exterior sky or outdoor areas are visible through windows, they must be FULLY DARK - pitch black or deep navy blue night sky with NO daylight visible. Interior must be illuminated ONLY by warm artificial lighting (ceiling lights, lamps, downlights). Windows should show darkness outside. The contrast between warm interior lighting and dark exterior must be dramatic and obvious. Overall mood: cozy evening indoors with night visible outside.',
-        'golden_hour': 'GOLDEN HOUR SCENE: If exterior sky is visible through windows, make it GOLDEN PINK AND ORANGE SUNSET SKY with soft fluffy clouds catching warm light. Strong warm GOLDEN SUNLIGHT streaming directionally through windows casting defined light beams and long dramatic shadows across interior surfaces. High contrast between golden highlights and warm shadows. Entire scene bathed in cinematic warm orange-pink glow. This must be DRAMATICALLY different from regular daylight - much warmer, more directional, with visible light rays and long shadows.',
+        'day': 'DAYLIGHT SCENE: If windows show open sky, make it BRIGHT BLUE DAYLIGHT SKY with white clouds. If windows show buildings/streets/urban views, keep those views but apply bright neutral daylight illumination to them. Interior lighting must be BRIGHT, AIRY, and NATURALLY LIT with soft even illumination throughout. Shadows are soft and minimal. The entire scene should feel fresh, open, and daytime-bright. NO warm tones - keep lighting cool and natural like midday sun.',
+
+        'night': 'NIGHT SCENE: Windows must show DARKNESS outside - if showing sky make it pitch black or deep navy, if showing streets/buildings make them dark with subtle artificial lights (street lamps, building windows). DO NOT add daylight to exterior views. Interior must be illuminated ONLY by warm artificial lighting (ceiling lights, lamps, downlights). The contrast between warm interior lighting and dark exterior must be dramatic and obvious. Overall mood: cozy evening indoors with night visible outside.',
+
+        'golden_hour': 'GOLDEN HOUR SCENE: DO NOT add clouds unless the window clearly shows open sky. If windows show buildings/streets/urban views, simply bathe them in warm golden-hour light with peachy-orange hues. If windows DO show open sky, then add GOLDEN PINK AND ORANGE SUNSET SKY with soft clouds. Strong warm GOLDEN SUNLIGHT streaming directionally through windows casting defined light beams and long dramatic shadows across interior surfaces. High contrast between golden highlights and warm shadows. Entire scene bathed in cinematic warm orange-pink glow with directional light rays. This must be DRAMATICALLY different from regular daylight - much warmer, more directional, with visible light rays and long shadows.',
     }
 
-    # Colour scheme palettes
+    # Colour scheme palettes - Full ROYGBIV spectrum
     colour_scheme_prompts = {
+        # Neutrals & Whites
         'soft_linen': 'soft warm linen white walls, clean calm palette with subtle warmth',
         'cream_core': 'rich cream walls, warm inviting atmosphere',
-        'sage_calm': 'soft sage green walls, calming natural tones',
-        'terracotta_sun': 'warm terracotta walls, sun-baked Mediterranean warmth',
-        'olive_grove': 'olive green walls, earthy natural sophistication',
-        'burgundy_depth': 'deep burgundy walls, luxurious moody tones',
-        'forest_green': 'dark forest green walls, warm timber, bronze accents',
-        'midnight_blue': 'midnight blue walls with warm brass or gold accents',
-        'amber_glow': 'warm amber yellow walls, vibrant golden energy',
         'nordic_mist': 'pale grey-white walls, Scandinavian bright minimalism',
+        'warm_grey': 'warm grey walls with taupe undertones, cozy neutral sophistication',
+        'charcoal': 'deep charcoal grey walls, dramatic moody elegance with warm lighting',
+
+        # Reds & Pinks
+        'burgundy_depth': 'deep burgundy walls, luxurious moody tones with rich depth',
+        'crimson_red': 'bold crimson red accent wall, vibrant statement color with neutral balance',
+        'blush_pink': 'soft blush pink walls, romantic feminine warmth',
+        'dusty_rose': 'dusty rose walls, muted pink with earthy sophistication',
+
+        # Oranges & Corals
+        'terracotta_sun': 'warm terracotta walls, sun-baked Mediterranean warmth',
+        'burnt_orange': 'burnt orange accent wall, bold autumnal richness',
+        'coral_reef': 'coral walls, vibrant tropical warmth with energy',
+
+        # Yellows & Golds
+        'amber_glow': 'warm amber yellow walls, vibrant golden energy',
+        'sunshine_yellow': 'bright sunshine yellow accent wall, cheerful optimistic warmth',
+        'mustard': 'mustard yellow walls, vintage warm sophistication',
+
+        # Greens
+        'sage_calm': 'soft sage green walls, calming natural tones',
+        'olive_grove': 'olive green walls, earthy natural sophistication',
+        'forest_green': 'dark forest green walls, rich jewel tone with warm brass accents',
+        'emerald': 'emerald green walls, luxurious jewel tone vibrancy',
+
+        # Blues
+        'midnight_blue': 'midnight blue walls with warm brass or gold accents, deep sophisticated navy',
+        'sky_blue': 'sky blue walls, fresh airy coastal lightness',
+        'teal': 'teal walls, sophisticated blue-green balance with depth',
+        'navy': 'navy blue walls, classic nautical depth with warm contrast',
+
+        # Purples & Violets
+        'lavender': 'soft lavender walls, gentle purple with calming elegance',
+        'plum': 'rich plum purple walls, luxurious jewel tone sophistication',
+        'aubergine': 'deep aubergine walls, dramatic dark purple with moody warmth',
     }
 
     # Flooring descriptions
@@ -220,12 +252,22 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'polished_concrete': 'polished concrete floors with subtle sheen',
         'carpetted': 'high-quality carpeted flooring with plush texture',
     }
+
+    # Wallpaper descriptions
+    wallpaper_prompts = {
+        'floral': 'elegant floral wallpaper with delicate botanical pattern, sophisticated and refined',
+        'geometric': 'modern geometric wallpaper with clean lines and abstract patterns, contemporary style',
+        'striped': 'classic striped wallpaper with vertical lines, timeless and elegant',
+        'damask': 'traditional damask wallpaper with ornate repeating patterns, luxurious heritage style',
+        'botanical': 'lush botanical wallpaper with large-scale leaf and plant motifs, tropical sophistication',
+    }
     
     # Build the prompt - FOCUS ON EDITING, NOT GENERATING
     
     # Special handling for garden/outdoor spaces
     if request.room_type in ['garden', 'outdoor']:
         prompt_parts = [
+            "CRITICAL NON-NEGOTIABLE RULE: If there are ANY doors or windows visible in this outdoor space, you MUST leave them EXACTLY where they are - same position, same size, same shape. DO NOT move, resize, add, or remove any doors or windows.",
             "EDIT THE PROVIDED PHOTOGRAPH of this outdoor space. Do not create a new image - modify the existing photo only.",
             "Keep the EXACT same garden boundaries, fences, walls, and structures in their current positions.",
             "Keep the EXACT same camera angle and perspective as the input photo.",
@@ -250,13 +292,13 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Standard interior renovation prompt
     prompt_parts = [
+        "CRITICAL NON-NEGOTIABLE RULE: If there are ANY doors or windows in this room, you MUST leave them EXACTLY where they are - same position, same size, same shape. DO NOT move, resize, add, or remove any doors or windows. This is ABSOLUTELY MANDATORY.",
         "EDIT THE PROVIDED PHOTOGRAPH. Do not create a new image - modify the existing photo only.",
         "Keep the EXACT same room - same size, same shape, same walls, same ceiling height.",
-        "Keep ALL windows EXACTLY where they are in the photo - same position, same size, same shape.",
-        "Keep ALL doors EXACTLY where they are in the photo - same position, same size, same shape.", 
         "Keep the EXACT same camera angle and perspective as the input photo.",
         "ONLY CHANGE: paint colours, flooring material, furniture, fixtures, and decor.",
         "DO NOT: enlarge the room, add windows, add doors, change the room shape, or change the viewpoint.",
+        "REMINDER: Windows and doors stay in their EXACT original positions - this is non-negotiable.",
     ]
     
     # Style
@@ -278,6 +320,10 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     # Add flooring if specified
     if request.flooring and request.flooring in flooring_prompts:
         prompt_parts.append(f"Flooring: {flooring_prompts[request.flooring]}.")
+
+    # Add wallpaper if specified
+    if request.wallpaper and request.wallpaper in wallpaper_prompts:
+        prompt_parts.append(f"Wall treatment: {wallpaper_prompts[request.wallpaper]}.")
 
     # Always include greenery for realism and warmth
     prompt_parts.append("Include tasteful placement of indoor plants and flowers to enhance realism and warmth.")
