@@ -159,13 +159,6 @@
       background: #2c2c2c;
       border-color: #2c2c2c;
       color: #faf8f4;
-      animation: selectPop 0.25s ease;
-    }
-
-    @keyframes selectPop {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-      100% { transform: scale(1); }
     }
 
     /* Accordion toggle groups */
@@ -476,6 +469,33 @@
       { id: 'polished_concrete', label: 'Polished Concrete' },
     ];
 
+    const LOADING_MESSAGES = [
+      "Overshooting the budget...",
+      "Knocking through a wall or two...",
+      "Arguing with the listed building officer...",
+      "Convincing the neighbours about the extension...",
+      "Sourcing reclaimed Victorian floorboards...",
+      "Haggling at the antique market...",
+      "Pretending to understand load-bearing walls...",
+      "Googling 'is Farrow & Ball worth it'...",
+      "Adding another velvet sofa...",
+      "Removing the previous owner's wallpaper choices...",
+      "Manifesting off-street parking...",
+      "Installing underfloor heating retrospectively...",
+      "Finding a builder who'll actually call back...",
+      "Justifying the statement pendant light...",
+      "Hiding the boiler somewhere clever...",
+      "Making the most of the 'cosy' proportions...",
+      "Explaining 'open-plan living' to a 1930s semi...",
+      "Choosing between Hague Blue and Stiffkey Blue...",
+      "Measuring twice, cutting once...",
+      "Persuading the mortgage lender it's 'characterful'...",
+      "Adding a boot room no one asked for...",
+      "Squeezing in a downstairs loo...",
+      "Deciding the kitchen island is non-negotiable...",
+      "Imagining what 'good bones' actually means...",
+    ];
+
     // ============================================
     // COMPONENTS
     // ============================================
@@ -603,7 +623,7 @@
     // Loading dots animation component
     function LoadingDots() {
       const [dots, setDots] = useState('');
-      
+
       useEffect(() => {
         const interval = setInterval(() => {
           setDots(prev => {
@@ -613,8 +633,32 @@
         }, 400);
         return () => clearInterval(interval);
       }, []);
-      
+
       return <span className="inline-block w-6 text-left">{dots}</span>;
+    }
+
+    // Loading message component with cycling witty messages
+    function LoadingMessage() {
+      const [messageIndex, setMessageIndex] = useState(0);
+      const [isVisible, setIsVisible] = useState(true);
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setIsVisible(false); // fade out
+          setTimeout(() => {
+            setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+            setIsVisible(true); // fade in
+          }, 300);
+        }, 4000);
+
+        return () => clearInterval(interval);
+      }, []);
+
+      return (
+        <p className={`text-linen-600 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+          {LOADING_MESSAGES[messageIndex]}
+        </p>
+      );
     }
 
     // Configuration summary for results page
@@ -1198,7 +1242,7 @@
                   </h2>
                   <p className="text-linen-600">
                     {isLoading
-                      ? "This usually takes 15 seconds... you can't rush art."
+                      ? 'This usually takes around 15 seconds.'
                       : 'Drag the slider to compare before and after.'}
                   </p>
                 </div>
@@ -1208,7 +1252,7 @@
                     <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center">
                       <div className="text-center">
                         <div className="w-12 h-12 border-4 border-linen-300 border-t-linen-700 rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-linen-600">Designing<LoadingDots /></p>
+                        <LoadingMessage />
                       </div>
                     </div>
                   </div>
