@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Renovision. A Doer-Upper's Best Friend.</title>
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="apple-touch-icon" href="favicon.png">
@@ -268,6 +268,23 @@
     
     .input-field::placeholder {
       color: #b8b1a4;
+      opacity: var(--placeholder-opacity, 1);
+      transition: opacity 0.3s ease-out;
+    }
+
+    .input-field::-webkit-input-placeholder {
+      opacity: var(--placeholder-opacity, 1);
+      transition: opacity 0.3s ease-out;
+    }
+
+    .input-field::-moz-placeholder {
+      opacity: var(--placeholder-opacity, 1);
+      transition: opacity 0.3s ease-out;
+    }
+
+    .input-field:-ms-input-placeholder {
+      opacity: var(--placeholder-opacity, 1);
+      transition: opacity 0.3s ease-out;
     }
     
     /* Comparison slider */
@@ -575,36 +592,36 @@
     ];
 
     const EXTRA_NOTES_PLACEHOLDERS = [
-      "Pop a Keith Haring on that wall, your sofa will thank you",
-      "A Togo in neon orange might clash gloriously with that rug",
-      "Imagine a Labradoodle sprawled on the velvet armchair",
-      "Maybe a gold-trimmed mirror that makes your hallway look heroic",
-      "Hang a disco ball above the kitchen island, why not",
-      "Scatter cushions like confetti on the sofa, bold and unapologetic",
-      "A stack of mid-century coffee table books, just begging to be spilled",
-      "Put a tiny cactus army on the windowsill",
-      "Maybe a velvet pouf where nobody will sit but it looks fabulous",
-      "Brass taps in the kitchen that scream, \"I'm worth it\"",
-      "A neon sign saying \"Dinner Served?\" above the stove",
-      "A potted palm in the corner like it owns the place",
-      "Add a geometric rug so sharp it could cut feelings",
-      "A vintage record player with jazz spilling like spilled wine",
-      "A framed dog portrait, bonus points if it's wearing sunglasses",
-      "Floor cushions in crazy prints for impromptu dance-offs",
-      "A statement pendant light that doubles as a conversation starter",
-      "Some mismatched chairs around the table, chaos looks chic",
-      "A little gold statue that nobody knows the origin of",
-      "Hang a map with pins where you've never been",
-      "A velvet headboard so dramatic it deserves its own theme song",
-      "A neon flamingo lamp because subtle is overrated",
-      "A beanbag in the reading nook for dramatic lounging",
-      "An oversized clock that looks like it belongs in a Wes Anderson film",
-      "Throw in a basket of ridiculously fluffy throws, because why not",
-      "A single monstera leaf in a glass vase, majestically lonely",
-      "A tiny dog bowl in designer chic, just for laughs",
-      "A coffee table that doubles as a mini gallery of oddities",
-      "A bright wallpaper corner no one can resist photographing",
-      "A chandelier above the bed for your inner royalty to thrive",
+      "Pop a Keith Haring on that wall, your sofa will thank you...",
+      "A Togo in neon orange might clash gloriously with that rug...",
+      "Imagine a Labradoodle sprawled on the velvet armchair...",
+      "Maybe a gold-trimmed mirror that makes your hallway look heroic...",
+      "Hang a disco ball above the kitchen island, why not...",
+      "Scatter cushions like confetti on the sofa, bold and unapologetic...",
+      "A stack of mid-century coffee table books, just begging to be spilled...",
+      "Put a tiny cactus army on the windowsill...",
+      "Maybe a velvet pouf where nobody will sit but it looks fabulous...",
+      "Brass taps in the kitchen that scream, \"I'm worth it\"...",
+      "A neon sign saying \"Dinner Served?\" above the stove...",
+      "A potted palm in the corner like it owns the place...",
+      "Add a geometric rug so sharp it could cut feelings...",
+      "A vintage record player with jazz spilling like spilled wine...",
+      "A framed dog portrait, bonus points if it's wearing sunglasses...",
+      "Floor cushions in crazy prints for impromptu dance-offs...",
+      "A statement pendant light that doubles as a conversation starter...",
+      "Some mismatched chairs around the table, chaos looks chic...",
+      "A little gold statue that nobody knows the origin of...",
+      "Hang a map with pins where you've never been...",
+      "A velvet headboard so dramatic it deserves its own theme song...",
+      "A neon flamingo lamp because subtle is overrated...",
+      "A beanbag in the reading nook for dramatic lounging...",
+      "An oversized clock that looks like it belongs in a Wes Anderson film...",
+      "Throw in a basket of ridiculously fluffy throws, because why not...",
+      "A single monstera leaf in a glass vase, majestically lonely...",
+      "A tiny dog bowl in designer chic, just for laughs...",
+      "A coffee table that doubles as a mini gallery of oddities...",
+      "A bright wallpaper corner no one can resist photographing...",
+      "A chandelier above the bed for your inner royalty to thrive...",
       "Imagine a velvet chaise for napping while pondering the futility of existence...",
       "A gilt-framed portrait of a cat judging your life choices...",
       "Scatter books like breadcrumbs, leading to some secret philosophical revelation...",
@@ -1041,18 +1058,22 @@
     // Animated textarea component with typewriter placeholder
     function AnimatedTextarea({ value, onChange, label, sublabel }) {
       const [placeholder, setPlaceholder] = useState('');
+      const [placeholderOpacity, setPlaceholderOpacity] = useState(1);
       const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(() =>
         Math.floor(Math.random() * EXTRA_NOTES_PLACEHOLDERS.length)
       );
       const typewriterTimeout = useRef(null);
       const pauseTimeout = useRef(null);
+      const fadeTimeout = useRef(null);
 
       useEffect(() => {
         // Only animate placeholder when textarea is empty
         if (value && value.trim().length > 0) {
           setPlaceholder('');
+          setPlaceholderOpacity(1);
           if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
           if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
+          if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
           return;
         }
 
@@ -1063,15 +1084,20 @@
           if (charIndex < currentText.length) {
             setPlaceholder(currentText.substring(0, charIndex + 1));
             charIndex++;
-            const delay = 30 + Math.random() * 20; // 30-50ms per char
+            const delay = 15 + Math.random() * 10; // 15-25ms per char (faster)
             typewriterTimeout.current = setTimeout(typeIn, delay);
           } else {
-            // Finished typing - pause before moving to next
+            // Finished typing - brief pause then fade out
             pauseTimeout.current = setTimeout(() => {
-              // Clear and move to next suggestion
-              setPlaceholder('');
-              setCurrentSuggestionIndex((prev) => (prev + 1) % EXTRA_NOTES_PLACEHOLDERS.length);
-            }, 3000); // 3 second pause
+              // Fade out
+              setPlaceholderOpacity(0);
+              // Wait 40ms after fade, then move to next
+              fadeTimeout.current = setTimeout(() => {
+                setPlaceholder('');
+                setPlaceholderOpacity(1);
+                setCurrentSuggestionIndex((prev) => (prev + 1) % EXTRA_NOTES_PLACEHOLDERS.length);
+              }, 40);
+            }, 2000); // 2 second pause before fade
           }
         };
 
@@ -1083,6 +1109,7 @@
         return () => {
           if (typewriterTimeout.current) clearTimeout(typewriterTimeout.current);
           if (pauseTimeout.current) clearTimeout(pauseTimeout.current);
+          if (fadeTimeout.current) clearTimeout(fadeTimeout.current);
         };
       }, [currentSuggestionIndex, value]);
 
@@ -1099,6 +1126,9 @@
             onChange={onChange}
             placeholder={placeholder}
             className="input-field resize-none h-28"
+            style={{
+              '--placeholder-opacity': placeholderOpacity
+            }}
           />
         </div>
       );
