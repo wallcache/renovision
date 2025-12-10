@@ -178,14 +178,6 @@
       background: #f2efe9;
     }
 
-    .toggle-group-header .selected-value {
-      color: #6b655c;
-      font-size: 0.875rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
     .toggle-group-header .chevron {
       transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       color: #a89f93;
@@ -819,13 +811,12 @@
             className={`toggle-group-header ${isOpen ? 'expanded' : ''}`}
             onClick={onToggle}
           >
-            <div>
-              <div className="text-sm font-medium text-linen-800">{label}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-linen-800">{label}</span>
               {value && (
-                <div className="selected-value">
-                  <span>✓</span>
-                  <span>{getSelectedLabel()}</span>
-                </div>
+                <span className="text-sm text-linen-600">
+                  {getSelectedLabel()}
+                </span>
               )}
             </div>
             <svg
