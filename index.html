@@ -458,6 +458,9 @@
       { id: 'scandinavian', label: 'Scandinavian' },
       { id: 'wabisabi', label: 'Wabi-Sabi' },
       { id: 'mediterranean', label: 'Mediterranean' },
+      { id: 'artdeco', label: 'Art Deco' },
+      { id: 'bohemian', label: 'Bohemian' },
+      { id: 'coastal', label: 'Coastal' },
     ];
 
     const ROOM_TYPE_OPTIONS = [
@@ -1122,15 +1125,15 @@
           onTouchCancel={handleTouchEnd}
           onDragStart={(e) => e.preventDefault()}
         >
-          {/* Swapped: After image is now the base layer */}
-          <img src={afterSrc} alt="After" className="w-full" draggable="false" />
+          {/* Base layer: Original (before) image */}
+          <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
 
-          {/* Swapped: Before image is now the overlay that gets revealed */}
+          {/* Overlay: AI generated (after) image that gets revealed */}
           <div
             className="comparison-after"
             style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
           >
-            <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
+            <img src={afterSrc} alt="After" className="w-full" draggable="false" />
           </div>
 
           <div
@@ -1874,22 +1877,24 @@
                 </div>
 
                 {isLoading ? (
-                  <div className="max-w-2xl mx-auto">
+                  <div className="max-w-2xl mx-auto px-4">
                     <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center" style={{ background: '#fdfcfb' }}>
-                      <div className="text-center">
-                        <video
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          className="w-32 h-32 mx-auto mb-4"
-                          style={{
-                            mixBlendMode: 'multiply',
-                            filter: 'contrast(1.1)'
-                          }}
-                        >
-                          <source src="renovision_animation.mp4" type="video/mp4" />
-                        </video>
+                      <div className="text-center px-6">
+                        <div className="w-32 h-32 mx-auto mb-4 bg-white rounded-2xl flex items-center justify-center">
+                          <video
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="w-32 h-32"
+                            style={{
+                              mixBlendMode: 'multiply',
+                              filter: 'contrast(1.1)'
+                            }}
+                          >
+                            <source src="renovision_animation.mp4" type="video/mp4" />
+                          </video>
+                        </div>
                         <LoadingMessage />
                       </div>
                     </div>

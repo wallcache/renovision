@@ -178,6 +178,9 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'scandinavian': 'Scandinavian hygge-inspired design with light oak and birch woods, cosy wool and linen textiles, bright neutral whites and soft greys, functional furniture, warm ambient lighting',
         'wabisabi': 'Wabi-Sabi design embracing natural imperfection, low platform furniture, natural wood and stone materials, zen minimalism, asymmetric balance, clean simplicity',
         'mediterranean': 'Mediterranean style with terracotta tones, wrought iron details, warm ochre and sun-bleached colours, rustic wooden elements, artisanal ceramics',
+        'artdeco': 'Art Deco design with luxurious geometric patterns, rich jewel tones (emerald, sapphire, ruby), polished brass and gold accents, velvet and silk textiles, stepped forms, glamorous mirror work, black and white marble, opulent crystal lighting',
+        'bohemian': 'Bohemian eclectic design with vibrant layered textiles (kilim rugs, patterned throws, embroidered cushions), abundant indoor plants, macramé and woven wall hangings, vintage furniture pieces, warm earthy colors mixed with jewel tones, natural materials, global-inspired accessories, relaxed informal atmosphere',
+        'coastal': 'Coastal design with light airy palette of whites, soft blues, and sandy beiges, natural linen and cotton fabrics, weathered wood furniture, rope and rattan accents, nautical-inspired details, abundant natural light, sea-glass colors, driftwood elements, relaxed beach-house atmosphere',
     }
 
     # Room Type descriptions (for furniture context only)
