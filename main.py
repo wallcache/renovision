@@ -172,15 +172,23 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Interior Design Style descriptions
     style_prompts = {
-        'midcentury': 'Mid-Century Modern design featuring warm walnut and teak wood tones, clean architectural lines, organic curves, iconic furniture with hairpin legs, statement lighting, warm mustard and olive accents',
-        'minimal': 'Minimal design with sleek clutter-free styling, refined neutral palette of whites and greys, functional furniture with clean lines, strategic negative space, hidden storage, understated elegance',
-        'industrial': 'Industrial aesthetic with metal fixtures and Edison bulbs, concrete-effect surfaces, black steel elements, leather and distressed wood furniture, urban warehouse character',
-        'scandinavian': 'Scandinavian hygge-inspired design with light oak and birch woods, cosy wool and linen textiles, bright neutral whites and soft greys, functional furniture, warm ambient lighting',
-        'wabisabi': 'Wabi-Sabi design embracing natural imperfection, low platform furniture, natural wood and stone materials, zen minimalism, asymmetric balance, clean simplicity',
-        'mediterranean': 'Mediterranean style with terracotta tones, wrought iron details, warm ochre and sun-bleached colours, rustic wooden elements, artisanal ceramics',
-        'artdeco': 'Art Deco design with luxurious geometric patterns, rich jewel tones (emerald, sapphire, ruby), polished brass and gold accents, velvet and silk textiles, stepped forms, glamorous mirror work, black and white marble, opulent crystal lighting',
-        'bohemian': 'Bohemian eclectic design with vibrant layered textiles (kilim rugs, patterned throws, embroidered cushions), abundant indoor plants, macramé and woven wall hangings, vintage furniture pieces, warm earthy colors mixed with jewel tones, natural materials, global-inspired accessories, relaxed informal atmosphere',
-        'coastal': 'Coastal design with light airy palette of whites, soft blues, and sandy beiges, natural linen and cotton fabrics, weathered wood furniture, rope and rattan accents, nautical-inspired details, abundant natural light, sea-glass colors, driftwood elements, relaxed beach-house atmosphere',
+        'modern_organic': 'A magazine-quality modern organic interior with warm neutral tones, sculptural furniture with rounded edges, light oak floors, raw linen upholstery, plaster walls with subtle texture, floor-to-ceiling sheer curtains filtering soft daylight, handmade ceramic vases, woven jute rug, indoor olive tree, neutral color palette of cream, camel, sand and pale taupe, organic architectural lines, cozy but refined atmosphere, styled like a Homes & Gardens editorial shoot, natural light, high detail, ultra-realistic photography, Canon EOS R5, 35mm lens, soft depth of field',
+
+        'scandinavian_minimalism': 'A Scandinavian minimalist space with whitewashed walls, bleached oak flooring, simple low-profile furniture, soft wool throws, clean-lined sofa in light grey, pale wooden coffee table, matte black accents, subtle greenery, large windows with diffused northern light, uncluttered surfaces, hygge atmosphere, serene and airy, tastefully styled like a Nordic design magazine editorial, ultra-realistic photography, balanced composition, soft textures',
+
+        'japandi': 'A Japandi-style area combining Japanese and Scandinavian aesthetics, neutral earth tones, tatami-inspired textures, low wooden furniture, linen upholstery, minimalist decor, ceramic tea sets, shoji-style screens, textured plaster walls, boucle accent chairs, large indoor plants, warm natural sunlight streaming through wooden slatted windows, zen atmosphere, uncluttered space, refined and tranquil ambiance, styled for an interior design magazine shoot, ultra-realistic photography',
+
+        'parisian_classic': 'A Parisian-style classic interior with ornate ceiling moldings, bright white walls, tall French windows, antique fireplace mantel, herringbone parquet floors, contemporary neutral sofa, velvet accent chairs, brass lighting fixtures, vintage mirrors, soft linen curtains, elegant layering of classic and modern furniture, refined but lived-in mood, natural daylight, styled like a Homes & Gardens Paris apartment feature, ultra-realistic editorial photography',
+
+        'coastal_elevated': 'An elevated coastal interior with soft blues, sandy neutrals and crisp whites, light oak furniture, linen slipcovered sofa, woven rattan chairs, textured throw pillows, driftwood accents, seagrass rug, large windows with ocean light ambiance, no kitsch or nautical props, refined beach-house elegance, tasteful decor styled for a high-end coastal interiors magazine shoot, ultra-realistic photography',
+
+        'midcentury_modern': 'A mid-century modern interior with walnut furniture, tapered wooden legs, leather lounge chair, geometric patterned rug, sunburst accents, statement arc lamp, low-profile sofa, large abstract wall art, rich warm tones, indoor plants, daylight filtered through sheer curtains, balanced composition, styled like a design magazine editorial, ultra-realistic photography',
+
+        'moody_contemporary': 'A moody contemporary interior with deep charcoal walls, bronze and matte black accents, plush velvet sofa, sculptural lighting fixtures, dark oak floors, large abstract artwork, layered textures, dramatic soft lighting, warm contrast highlights, modern luxury atmosphere, upscale styling for an architectural digest editorial shoot, ultra-realistic photography',
+
+        'rustic_modern': 'A rustic-modern interior with exposed wooden beams, stone fireplace, large linen sectional sofa, reclaimed wood coffee table, neutral layered textiles, wool rugs, modern lighting fixtures, soft daylight through oversized windows, earthy tones, relaxed sophistication, styled for a premium countryside interiors magazine shoot, ultra-realistic photography',
+
+        'english_contemporary': 'An English contemporary interior with classic architectural details, paneled walls, layered textiles, soft neutral color palette, upholstered sofas with tailored lines, patterned accent cushions, antique side tables mixed with modern lighting, framed botanical prints, bookshelves with curated styling, gentle daylight through sash windows, refined warmth, styled as a Homes & Gardens British interior editorial, ultra-realistic photography',
     }
 
     # Room Type descriptions (for furniture context only)

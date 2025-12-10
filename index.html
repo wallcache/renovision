@@ -444,15 +444,15 @@
     
     // Toggle options
     const DESIGN_STYLE_OPTIONS = [
-      { id: 'midcentury', label: 'Mid-Century' },
-      { id: 'minimal', label: 'Minimal' },
-      { id: 'industrial', label: 'Industrial' },
-      { id: 'scandinavian', label: 'Scandinavian' },
-      { id: 'wabisabi', label: 'Wabi-Sabi' },
-      { id: 'mediterranean', label: 'Mediterranean' },
-      { id: 'artdeco', label: 'Art Deco' },
-      { id: 'bohemian', label: 'Bohemian' },
-      { id: 'coastal', label: 'Coastal' },
+      { id: 'modern_organic', label: 'Modern Organic' },
+      { id: 'scandinavian_minimalism', label: 'Scandinavian Minimalism' },
+      { id: 'japandi', label: 'Japandi' },
+      { id: 'parisian_classic', label: 'Parisian Classic' },
+      { id: 'coastal_elevated', label: 'Coastal Elevated' },
+      { id: 'midcentury_modern', label: 'Mid-Century Modern' },
+      { id: 'moody_contemporary', label: 'Moody Contemporary' },
+      { id: 'rustic_modern', label: 'Rustic Modern' },
+      { id: 'english_contemporary', label: 'English Contemporary' },
     ];
 
     const ROOM_TYPE_OPTIONS = [
@@ -1868,24 +1868,36 @@
                 </div>
 
                 {isLoading ? (
-                  <div className="max-w-2xl mx-auto px-4">
-                    <div className="card rounded-2xl aspect-[4/3] flex items-center justify-center" style={{ background: '#fdfcfb' }}>
-                      <div className="text-center px-6">
-                        <div className="w-32 h-32 mx-auto mb-4 bg-white rounded-2xl flex items-center justify-center">
-                          <video
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-32 h-32"
-                            style={{
-                              mixBlendMode: 'multiply',
-                              filter: 'contrast(1.1)'
-                            }}
-                          >
-                            <source src="renovision_animation.mp4" type="video/mp4" />
-                          </video>
-                        </div>
+                  <div className="max-w-3xl mx-auto px-6">
+                    <div className="flex flex-col items-center justify-center py-16 md:py-24">
+                      {/* Animation container - pure white background, no visible edges */}
+                      <div
+                        className="mb-12 flex items-center justify-center"
+                        style={{
+                          width: '240px',
+                          height: '240px',
+                          background: '#FFFFFF'
+                        }}
+                      >
+                        <video
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          style={{
+                            width: '240px',
+                            height: '240px',
+                            mixBlendMode: 'multiply',
+                            filter: 'contrast(1.05)',
+                            display: 'block'
+                          }}
+                        >
+                          <source src="renovision_animation.mp4" type="video/mp4" />
+                        </video>
+                      </div>
+
+                      {/* Loading text with better spacing */}
+                      <div className="text-center px-8 max-w-md">
                         <LoadingMessage />
                       </div>
                     </div>
