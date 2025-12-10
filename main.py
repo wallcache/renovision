@@ -193,13 +193,14 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'outdoor': 'outdoor furniture and landscaping elements',
     }
     
-    # Time of day lighting descriptions - DRAMATIC and CLEARLY PERCEPTIBLE changes
+    # Time of day lighting descriptions - ONLY changes lighting, colors, and hues
+    # DO NOT change physical elements or what's visible outside windows
     time_of_day_prompts = {
-        'day': 'DAYLIGHT SCENE: If windows show open sky, make it BRIGHT BLUE DAYLIGHT SKY with white clouds. If windows show buildings/streets/urban views, keep those views but apply bright neutral daylight illumination to them. Interior lighting must be BRIGHT, AIRY, and NATURALLY LIT with soft even illumination throughout. Shadows are soft and minimal. The entire scene should feel fresh, open, and daytime-bright. NO warm tones - keep lighting cool and natural like midday sun.',
+        'day': 'DAYLIGHT LIGHTING: Apply bright, natural daylight illumination throughout the interior. Use soft, even lighting with minimal shadows. If windows exist, apply cool natural daylight color temperature to the light coming through them - DO NOT change what is visible outside the windows, only adjust the color and brightness of the light itself. The interior should feel fresh, airy, and naturally lit with cool neutral tones.',
 
-        'night': 'NIGHT SCENE: Windows must show DARKNESS outside - if showing sky make it pitch black or deep navy, if showing streets/buildings make them dark with subtle artificial lights (street lamps, building windows). DO NOT add daylight to exterior views. Interior must be illuminated ONLY by warm artificial lighting (ceiling lights, lamps, downlights). The contrast between warm interior lighting and dark exterior must be dramatic and obvious. Overall mood: cozy evening indoors with night visible outside.',
+        'night': 'NIGHT LIGHTING: Apply warm artificial interior lighting (ceiling lights, lamps, downlights) as the primary light source. If windows exist, darken the light coming through them to indicate nighttime - DO NOT change what is visible outside the windows, only adjust the darkness/brightness of the window areas to appear darker. Use warm amber lighting tones for interior fixtures. Create cozy evening ambiance with warm artificial light.',
 
-        'golden_hour': 'GOLDEN HOUR SCENE: DO NOT add clouds unless the window clearly shows open sky. If windows show buildings/streets/urban views, simply bathe them in warm golden-hour light with peachy-orange hues. If windows DO show open sky, then add GOLDEN PINK AND ORANGE SUNSET SKY with soft clouds. Strong warm GOLDEN SUNLIGHT streaming directionally through windows casting defined light beams and long dramatic shadows across interior surfaces. High contrast between golden highlights and warm shadows. Entire scene bathed in cinematic warm orange-pink glow with directional light rays. This must be DRAMATICALLY different from regular daylight - much warmer, more directional, with visible light rays and long shadows.',
+        'golden_hour': 'SUBTLE GOLDEN HOUR LIGHTING: Apply gentle, warm golden-hour illumination with soft peachy-orange color cast throughout the scene. If windows exist, add warm golden light streaming through with SUBTLE directional quality - DO NOT change what is visible outside the windows, only apply warm golden-hour color grading to the light. Use soft, natural warm tones (NOT oversaturated or cinematic). Keep the effect realistic and understated - this should look like natural late-afternoon sunlight, not dramatic cinema lighting. Avoid harsh shadows or overly bright highlights.',
     }
 
     # Colour scheme palettes - Full ROYGBIV spectrum
@@ -287,7 +288,7 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     # Special handling for garden/outdoor spaces
     if request.room_type in ['garden', 'outdoor']:
         prompt_parts = [
-            "CRITICAL NON-NEGOTIABLE RULE: If there are ANY doors or windows visible in this outdoor space, you MUST leave them EXACTLY where they are - same position, same size, same shape. DO NOT move, resize, add, or remove any doors or windows.",
+            "CRITICAL NON-NEGOTIABLE RULE - DOORS AND WINDOWS: If there are ANY doors or windows visible in this outdoor space, you MUST leave them EXACTLY where they are - same position, same size, same shape, same number. DO NOT move, resize, add, or remove ANY doors or windows. ABSOLUTELY NO NEW WINDOWS OR DOORS OF ANY KIND.",
             "EDIT THE PROVIDED PHOTOGRAPH of this outdoor space. Do not create a new image - modify the existing photo only.",
             "Keep the EXACT same garden boundaries, fences, walls, and structures in their current positions.",
             "Keep the EXACT same camera angle and perspective as the input photo.",
@@ -320,13 +321,13 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Standard interior renovation prompt
     prompt_parts = [
-        "CRITICAL NON-NEGOTIABLE RULE: If there are ANY doors or windows in this room, you MUST leave them EXACTLY where they are - same position, same size, same shape. DO NOT move, resize, add, or remove any doors or windows. This is ABSOLUTELY MANDATORY.",
+        "CRITICAL NON-NEGOTIABLE RULE #1 - DOORS AND WINDOWS: If there are ANY doors or windows in this room, you MUST leave them EXACTLY where they are - same position, same size, same shape, same number. DO NOT move, resize, add, or remove ANY doors or windows. This is ABSOLUTELY MANDATORY. NO NEW WINDOWS OR DOORS OF ANY KIND.",
+        "CRITICAL NON-NEGOTIABLE RULE #2 - ROOM STRUCTURE: Keep the EXACT same room dimensions, wall positions, ceiling height, and architectural features. DO NOT change the room's physical structure in any way.",
         "EDIT THE PROVIDED PHOTOGRAPH. Do not create a new image - modify the existing photo only.",
-        "Keep the EXACT same room - same size, same shape, same walls, same ceiling height.",
         "Keep the EXACT same camera angle and perspective as the input photo.",
         "ONLY CHANGE: paint colours, flooring material, furniture, fixtures, and decor.",
         "DO NOT: enlarge the room, add windows, add doors, change the room shape, or change the viewpoint.",
-        "REMINDER: Windows and doors stay in their EXACT original positions - this is non-negotiable.",
+        "ABSOLUTELY NO NEW WINDOWS OR DOORS - work only with what exists in the original image.",
     ]
     
     # Style
@@ -656,24 +657,28 @@ async def generate_renovation_image(request: RenovationRequest) -> str:
     """
     # Fetch and encode the source image
     source_image_b64 = await fetch_image_as_base64(request.image_url)
-    
+
     # Build the prompt
     prompt = build_renovation_prompt(request)
-    
-    print(f"[DEBUG] Using image provider: {IMAGE_PROVIDER}")
-    print(f"[DEBUG] Prompt: {prompt[:200]}...")
-    
+
+    print(f"\n{'='*80}")
+    print(f"[PROMPT] Using image provider: {IMAGE_PROVIDER}")
+    print(f"[PROMPT] Full prompt being sent to AI model:")
+    print(f"{'-'*80}")
+    print(prompt)
+    print(f"{'='*80}\n")
+
     if IMAGE_PROVIDER == "replicate":
         if not REPLICATE_API_TOKEN:
             raise HTTPException(
-                status_code=500, 
+                status_code=500,
                 detail="REPLICATE_API_TOKEN not configured. Get one at https://replicate.com"
             )
         return await generate_with_replicate(source_image_b64, prompt)
     else:
         if not GEMINI_API_KEY and not COMET_API_KEY:
             raise HTTPException(
-                status_code=500, 
+                status_code=500,
                 detail="No API key configured. Set GEMINI_API_KEY or REPLICATE_API_TOKEN."
             )
         return await generate_with_gemini(source_image_b64, prompt)

@@ -410,7 +410,7 @@
     
     /* Logo */
     .logo-img {
-      height: 36px;
+      height: 56px;
       width: auto;
     }
     
@@ -1122,13 +1122,15 @@
           onTouchCancel={handleTouchEnd}
           onDragStart={(e) => e.preventDefault()}
         >
-          <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
+          {/* Swapped: After image is now the base layer */}
+          <img src={afterSrc} alt="After" className="w-full" draggable="false" />
 
+          {/* Swapped: Before image is now the overlay that gets revealed */}
           <div
             className="comparison-after"
             style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
           >
-            <img src={afterSrc} alt="After" className="w-full" draggable="false" />
+            <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
           </div>
 
           <div
@@ -1143,11 +1145,30 @@
             </div>
           </div>
 
-          <div className="absolute bottom-4 left-4 bg-linen-900/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-linen-100">
-            After
-          </div>
-          <div className="absolute bottom-4 right-4 bg-linen-100/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs font-medium text-linen-700">
+          {/* Labels with higher contrast and proper hiding behavior */}
+          {/* Before label on left - hides when slider passes over it (when slider > ~20%) */}
+          <div
+            className="absolute bottom-4 left-4 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity duration-200"
+            style={{
+              backgroundColor: 'rgba(253, 252, 251, 0.95)',
+              color: '#2c2c2c',
+              opacity: sliderPosition > 20 ? 0 : 1,
+              pointerEvents: 'none'
+            }}
+          >
             Before
+          </div>
+          {/* After label on right - hides when slider passes under it (when slider < ~80%) */}
+          <div
+            className="absolute bottom-4 right-4 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity duration-200"
+            style={{
+              backgroundColor: 'rgba(44, 44, 44, 0.95)',
+              color: '#faf8f4',
+              opacity: sliderPosition < 80 ? 0 : 1,
+              pointerEvents: 'none'
+            }}
+          >
+            After
           </div>
         </div>
       );
@@ -1422,8 +1443,7 @@
         }
       };
       const [extraNotes, setExtraNotes] = useState('');
-      const [autoDownload, setAutoDownload] = useState(false);
-      
+
       const [generatedResult, setGeneratedResult] = useState(null);
 
       const fetchPropertyImages = async (url) => {
@@ -1520,21 +1540,34 @@
         window.scrollTo(0, 0);
 
         try {
+          const requestPayload = {
+            image_url: selectedImage.originalUrl,
+            style: designStyle,
+            room_type: roomType,
+            time_of_day: timeOfDay,
+            colour_scheme: colourScheme,
+            flooring: flooring,
+            wallpaper: wallpaper !== 'none' ? wallpaper : null,
+            garden_style: gardenStyle,
+            extra_notes: extraNotes || null
+          };
+
+          // Log the configuration being sent to the backend
+          console.log('🎨 Renovation Request Configuration:', {
+            style: designStyle,
+            room_type: roomType,
+            time_of_day: timeOfDay,
+            colour_scheme: colourScheme,
+            flooring: flooring,
+            wallpaper: wallpaper !== 'none' ? wallpaper : null,
+            garden_style: gardenStyle,
+            extra_notes: extraNotes || null
+          });
+
           const response = await fetch(`${API_BASE_URL}/renovate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              image_url: selectedImage.originalUrl,
-              style: designStyle,
-              room_type: roomType,
-              time_of_day: timeOfDay,
-              colour_scheme: colourScheme,
-              flooring: flooring,
-              wallpaper: wallpaper !== 'none' ? wallpaper : null,
-              garden_style: gardenStyle,
-              extra_notes: extraNotes || null,
-              auto_download: autoDownload
-            })
+            body: JSON.stringify(requestPayload)
           });
 
           if (!response.ok) {
@@ -1548,25 +1581,15 @@
           }
 
           const data = await response.json();
-          
+
           const result = {
             before: selectedImage.url,
             after: `data:image/jpeg;base64,${data.generated_image_base64}`,
             style: designStyle,
             roomType: roomType
           };
-          
+
           setGeneratedResult(result);
-          
-          if (autoDownload && data.generated_image_base64) {
-            const link = document.createElement('a');
-            link.href = `data:image/jpeg;base64,${data.generated_image_base64}`;
-            link.download = `renovision-${roomType || 'room'}-${designStyle || 'styled'}.jpg`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-          
           setIsLoading(false);
           
         } catch (err) {
@@ -1589,7 +1612,6 @@
         setWallpaper('none');
         setGardenStyle(null);
         setExtraNotes('');
-        setAutoDownload(false);
         setGeneratedResult(null);
         setError(null);
       };
@@ -1823,13 +1845,7 @@
                       label="Extra Notes"
                       sublabel="Be as specific as you like"
                     />
-                    
-                    <CheckboxToggle
-                      label="Auto-download generated image"
-                      checked={autoDownload}
-                      onChange={setAutoDownload}
-                    />
-                    
+
                     <div className="mt-10">
                       <button
                         onClick={generateRenovation}
@@ -1906,17 +1922,46 @@
                     
                     <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
                       <button
-                        onClick={() => {
-                          const link = document.createElement('a');
-                          link.href = generatedResult.after;
-                          link.download = `renovision-${generatedResult.roomType || 'room'}-${generatedResult.style || 'styled'}.jpg`;
-                          document.body.appendChild(link);
-                          link.click();
-                          document.body.removeChild(link);
+                        onClick={async () => {
+                          // Detect iOS device
+                          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+                          if (isIOS && navigator.share) {
+                            // On iOS with Web Share API support, use native share
+                            try {
+                              // Convert base64 to blob
+                              const response = await fetch(generatedResult.after);
+                              const blob = await response.blob();
+                              const file = new File([blob], `renovision-${generatedResult.roomType || 'room'}-${generatedResult.style || 'styled'}.jpg`, { type: 'image/jpeg' });
+
+                              await navigator.share({
+                                files: [file],
+                                title: 'Renovision Image',
+                                text: 'Save to Photos'
+                              });
+                            } catch (err) {
+                              // If share fails, fall back to download
+                              console.log('Share failed, using download fallback:', err);
+                              const link = document.createElement('a');
+                              link.href = generatedResult.after;
+                              link.download = `renovision-${generatedResult.roomType || 'room'}-${generatedResult.style || 'styled'}.jpg`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                            }
+                          } else {
+                            // On other devices, use regular download
+                            const link = document.createElement('a');
+                            link.href = generatedResult.after;
+                            link.download = `renovision-${generatedResult.roomType || 'room'}-${generatedResult.style || 'styled'}.jpg`;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }
                         }}
                         className="btn-primary"
                       >
-                        Download Image
+                        {/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream ? 'Save to Photos' : 'Download Image'}
                       </button>
                       <button onClick={goBackToSelection} className="btn-secondary">
                         Try Another Room
