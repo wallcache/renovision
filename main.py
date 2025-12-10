@@ -171,21 +171,22 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     """Build an optimised prompt for image EDITING (not generation) with style and configuration toggles."""
     
     # Interior Design Style descriptions
-    # CRITICAL: These prompts must NEVER mention windows, doors, beams, fireplaces, or structural elements
+    # CRITICAL: These prompts must NEVER mention windows, doors, beams, fireplaces, flooring, or structural elements
+    # Flooring is controlled separately via the flooring toggle
     style_prompts = {
-        'modern_organic': 'A magazine-quality modern organic interior with warm neutral tones, sculptural furniture with rounded edges, light oak floors, raw linen upholstery, plaster walls with subtle texture, handmade ceramic vases, woven jute rug, indoor olive tree, neutral color palette of cream, camel, sand and pale taupe, organic curved furniture lines, cozy but refined atmosphere, styled like a Homes & Gardens editorial shoot, high detail, ultra-realistic photography, Canon EOS R5, 35mm lens, soft depth of field',
+        'modern_organic': 'A magazine-quality modern organic interior with warm neutral tones, sculptural furniture with rounded edges, raw linen upholstery, plaster walls with subtle texture, handmade ceramic vases, woven jute rug, indoor olive tree, neutral color palette of cream, camel, sand and pale taupe, organic curved furniture lines, cozy but refined atmosphere, styled like a Homes & Gardens editorial shoot, high detail, ultra-realistic photography, Canon EOS R5, 35mm lens, soft depth of field',
 
-        'scandinavian_minimalism': 'A Scandinavian minimalist space with whitewashed walls, bleached oak flooring, simple low-profile furniture, soft wool throws, clean-lined sofa in light grey, pale wooden coffee table, matte black accents, subtle greenery, uncluttered surfaces, hygge atmosphere, serene and airy, tastefully styled like a Nordic design magazine editorial, ultra-realistic photography, balanced composition, soft textures',
+        'scandinavian_minimalism': 'A Scandinavian minimalist space with whitewashed walls, simple low-profile furniture, soft wool throws, clean-lined sofa in light grey, pale wooden coffee table, matte black accents, subtle greenery, uncluttered surfaces, hygge atmosphere, serene and airy, tastefully styled like a Nordic design magazine editorial, ultra-realistic photography, balanced composition, soft textures',
 
         'japandi': 'A Japandi-style area combining Japanese and Scandinavian aesthetics, neutral earth tones, tatami-inspired textures, low wooden furniture, linen upholstery, minimalist decor, ceramic tea sets, textured plaster walls, boucle accent chairs, large indoor plants, zen atmosphere, uncluttered space, refined and tranquil ambiance, styled for an interior design magazine shoot, ultra-realistic photography',
 
-        'parisian_classic': 'A Parisian-style classic interior with ornate ceiling moldings, bright white walls, herringbone parquet floors, contemporary neutral sofa, velvet accent chairs, brass lighting fixtures, vintage mirrors, elegant layering of classic and modern furniture, refined but lived-in mood, styled like a Homes & Gardens Paris apartment feature, ultra-realistic editorial photography',
+        'parisian_classic': 'A Parisian-style classic interior with ornate ceiling moldings, bright white walls, contemporary neutral sofa, velvet accent chairs, brass lighting fixtures, vintage mirrors, elegant layering of classic and modern furniture, refined but lived-in mood, styled like a Homes & Gardens Paris apartment feature, ultra-realistic editorial photography',
 
         'coastal_elevated': 'An elevated coastal interior with soft blues, sandy neutrals and crisp whites, light oak furniture, linen slipcovered sofa, woven rattan chairs, textured throw pillows, driftwood accents, seagrass rug, no kitsch or nautical props, refined beach-house elegance, tasteful decor styled for a high-end coastal interiors magazine shoot, ultra-realistic photography',
 
         'midcentury_modern': 'A mid-century modern interior with walnut furniture, tapered wooden legs, leather lounge chair, geometric patterned rug, sunburst accents, statement arc lamp, low-profile sofa, large abstract wall art, rich warm tones, indoor plants, balanced composition, styled like a design magazine editorial, ultra-realistic photography',
 
-        'moody_contemporary': 'A moody contemporary interior with deep charcoal walls, bronze and matte black accents, plush velvet sofa, sculptural lighting fixtures, dark oak floors, large abstract artwork, layered textures, dramatic soft lighting, warm contrast highlights, modern luxury atmosphere, upscale styling for an architectural digest editorial shoot, ultra-realistic photography',
+        'moody_contemporary': 'A moody contemporary interior with deep charcoal walls, bronze and matte black accents, plush velvet sofa, sculptural lighting fixtures, large abstract artwork, layered textures, dramatic soft lighting, warm contrast highlights, modern luxury atmosphere, upscale styling for an architectural digest editorial shoot, ultra-realistic photography',
 
         'rustic_modern': 'A rustic-modern interior with large linen sectional sofa, reclaimed wood coffee table, neutral layered textiles, wool rugs, modern lighting fixtures, earthy tones, natural wood furniture pieces, relaxed sophistication, styled for a premium countryside interiors magazine shoot, ultra-realistic photography',
 
@@ -216,46 +217,47 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     }
 
     # Colour scheme palettes - Full ROYGBIV spectrum
+    # CRITICAL: Only describe paint colors, NEVER mention "accent wall" or structural changes
     colour_scheme_prompts = {
         # Neutrals & Whites
-        'soft_linen': 'soft warm linen white walls, clean calm palette with subtle warmth',
-        'cream_core': 'rich cream walls, warm inviting atmosphere',
-        'nordic_mist': 'pale grey-white walls, Scandinavian bright minimalism',
-        'warm_grey': 'warm grey walls with taupe undertones, cozy neutral sophistication',
-        'charcoal': 'deep charcoal grey walls, dramatic moody elegance with warm lighting',
+        'soft_linen': 'soft warm linen white color palette, clean calm atmosphere with subtle warmth',
+        'cream_core': 'rich cream color palette, warm inviting atmosphere',
+        'nordic_mist': 'pale grey-white color palette, Scandinavian bright minimalism',
+        'warm_grey': 'warm grey color palette with taupe undertones, cozy neutral sophistication',
+        'charcoal': 'deep charcoal grey color palette, dramatic moody elegance with warm lighting',
 
         # Reds & Pinks
-        'burgundy_depth': 'deep burgundy walls, luxurious moody tones with rich depth',
-        'crimson_red': 'bold crimson red accent wall, vibrant statement color with neutral balance',
-        'blush_pink': 'soft blush pink walls, romantic feminine warmth',
-        'dusty_rose': 'dusty rose walls, muted pink with earthy sophistication',
+        'burgundy_depth': 'deep burgundy color palette, luxurious moody tones with rich depth',
+        'crimson_red': 'bold crimson red color palette, vibrant statement color with neutral balance',
+        'blush_pink': 'soft blush pink color palette, romantic feminine warmth',
+        'dusty_rose': 'dusty rose color palette, muted pink with earthy sophistication',
 
         # Oranges & Corals
-        'terracotta_sun': 'warm terracotta walls, sun-baked Mediterranean warmth',
-        'burnt_orange': 'burnt orange accent wall, bold autumnal richness',
-        'coral_reef': 'coral walls, vibrant tropical warmth with energy',
+        'terracotta_sun': 'warm terracotta color palette, sun-baked Mediterranean warmth',
+        'burnt_orange': 'burnt orange color palette, bold autumnal richness',
+        'coral_reef': 'coral color palette, vibrant tropical warmth with energy',
 
         # Yellows & Golds
-        'amber_glow': 'warm amber yellow walls, vibrant golden energy',
-        'sunshine_yellow': 'bright sunshine yellow accent wall, cheerful optimistic warmth',
-        'mustard': 'mustard yellow walls, vintage warm sophistication',
+        'amber_glow': 'warm amber yellow color palette, vibrant golden energy',
+        'sunshine_yellow': 'bright sunshine yellow color palette, cheerful optimistic warmth',
+        'mustard': 'mustard yellow color palette, vintage warm sophistication',
 
         # Greens
-        'sage_calm': 'soft sage green walls, calming natural tones',
-        'olive_grove': 'olive green walls, earthy natural sophistication',
-        'forest_green': 'dark forest green walls, rich jewel tone with warm brass accents',
-        'emerald': 'emerald green walls, luxurious jewel tone vibrancy',
+        'sage_calm': 'soft sage green color palette, calming natural tones',
+        'olive_grove': 'olive green color palette, earthy natural sophistication',
+        'forest_green': 'dark forest green color palette, rich jewel tone with warm brass accents',
+        'emerald': 'emerald green color palette, luxurious jewel tone vibrancy',
 
         # Blues
-        'midnight_blue': 'midnight blue walls with warm brass or gold accents, deep sophisticated navy',
-        'sky_blue': 'sky blue walls, fresh airy coastal lightness',
-        'teal': 'teal walls, sophisticated blue-green balance with depth',
-        'navy': 'navy blue walls, classic nautical depth with warm contrast',
+        'midnight_blue': 'midnight blue color palette with warm brass or gold accents, deep sophisticated navy',
+        'sky_blue': 'sky blue color palette, fresh airy coastal lightness',
+        'teal': 'teal color palette, sophisticated blue-green balance with depth',
+        'navy': 'navy blue color palette, classic nautical depth with warm contrast',
 
         # Purples & Violets
-        'lavender': 'soft lavender walls, gentle purple with calming elegance',
-        'plum': 'rich plum purple walls, luxurious jewel tone sophistication',
-        'aubergine': 'deep aubergine walls, dramatic dark purple with moody warmth',
+        'lavender': 'soft lavender color palette, gentle purple with calming elegance',
+        'plum': 'rich plum purple color palette, luxurious jewel tone sophistication',
+        'aubergine': 'deep aubergine color palette, dramatic dark purple with moody warmth',
     }
 
     # Flooring descriptions
@@ -333,13 +335,12 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
     
     # Standard interior renovation prompt
     prompt_parts = [
-        "CRITICAL NON-NEGOTIABLE RULE #1 - DOORS AND WINDOWS: If there are ANY doors or windows in this room, you MUST leave them EXACTLY where they are - same position, same size, same shape, same number. DO NOT move, resize, add, or remove ANY doors or windows. This is ABSOLUTELY MANDATORY. NO NEW WINDOWS OR DOORS OF ANY KIND.",
-        "CRITICAL NON-NEGOTIABLE RULE #2 - ROOM STRUCTURE: Keep the EXACT same room dimensions, wall positions, ceiling height, and architectural features. DO NOT change the room's physical structure in any way.",
+        "CRITICAL NON-NEGOTIABLE RULE #1 - EXACT ROOM DIMENSIONS: The room MUST remain the EXACT same size and shape. DO NOT enlarge, shrink, expand, or resize the room in any dimension. The room's width, length, height, and overall volume must be IDENTICAL to the original photo. Keep all walls in their exact original positions.",
+        "CRITICAL NON-NEGOTIABLE RULE #2 - DOORS AND WINDOWS: If there are ANY doors or windows in this room, you MUST leave them EXACTLY where they are - same position, same size, same shape, same number. DO NOT move, resize, add, or remove ANY doors or windows. This is ABSOLUTELY MANDATORY. NO NEW WINDOWS OR DOORS OF ANY KIND.",
+        "CRITICAL NON-NEGOTIABLE RULE #3 - CAMERA PERSPECTIVE: Keep the EXACT same camera angle, viewpoint, and perspective as the input photo. DO NOT change the viewing angle or create a different perspective.",
         "EDIT THE PROVIDED PHOTOGRAPH. Do not create a new image - modify the existing photo only.",
-        "Keep the EXACT same camera angle and perspective as the input photo.",
         "ONLY CHANGE: paint colours, flooring material, furniture, fixtures, and decor.",
-        "DO NOT: enlarge the room, add windows, add doors, change the room shape, or change the viewpoint.",
-        "ABSOLUTELY NO NEW WINDOWS OR DOORS - work only with what exists in the original image.",
+        "DO NOT CHANGE: room size, room shape, wall positions, ceiling height, windows, doors, or camera perspective.",
     ]
     
     # Style
