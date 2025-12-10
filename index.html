@@ -1868,15 +1868,16 @@
                 </div>
 
                 {isLoading ? (
-                  <div className="max-w-3xl mx-auto px-6">
-                    <div className="flex flex-col items-center justify-center py-16 md:py-24">
-                      {/* Animation container - pure white background, no visible edges */}
+                  <div className="max-w-2xl mx-auto px-4">
+                    <div className="flex flex-col items-center justify-center py-12">
+                      {/* Rounded white box containing animation */}
                       <div
-                        className="mb-12 flex items-center justify-center"
+                        className="mb-8 flex items-center justify-center rounded-3xl"
                         style={{
-                          width: '240px',
-                          height: '240px',
-                          background: '#FFFFFF'
+                          width: '280px',
+                          height: '280px',
+                          background: '#FFFFFF',
+                          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)'
                         }}
                       >
                         <video
@@ -1885,8 +1886,8 @@
                           muted
                           playsInline
                           style={{
-                            width: '240px',
-                            height: '240px',
+                            width: '144px',
+                            height: '144px',
                             mixBlendMode: 'multiply',
                             filter: 'contrast(1.05)',
                             display: 'block'
@@ -1896,8 +1897,8 @@
                         </video>
                       </div>
 
-                      {/* Loading text with better spacing */}
-                      <div className="text-center px-8 max-w-md">
+                      {/* Loading text */}
+                      <div className="text-center px-6">
                         <LoadingMessage />
                       </div>
                     </div>
