@@ -290,12 +290,18 @@
       -ms-user-select: none;
       touch-action: none;
       -webkit-touch-callout: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
     }
-    
+
     .comparison-slider img {
       display: block;
       width: 100%;
-      height: auto;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
@@ -303,7 +309,7 @@
       -moz-user-drag: none;
       -o-user-drag: none;
     }
-    
+
     .comparison-after {
       position: absolute;
       top: 0;
@@ -311,6 +317,9 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     
     .comparison-handle {
@@ -1017,9 +1026,11 @@
 
     function ComparisonSlider({ beforeSrc, afterSrc }) {
       const containerRef = useRef(null);
+      const beforeImgRef = useRef(null);
       const [sliderPosition, setSliderPosition] = useState(50);
       const [isDragging, setIsDragging] = useState(false);
       const [isTouching, setIsTouching] = useState(false);
+      const [containerHeight, setContainerHeight] = useState(null);
       const scrollPosition = useRef(0);
 
       const lockBodyScroll = useCallback(() => {
@@ -1105,10 +1116,34 @@
         };
       }, [unlockBodyScroll]);
 
+      // Calculate container dimensions based on before image
+      useEffect(() => {
+        const img = new Image();
+        const updateDimensions = () => {
+          if (containerRef.current && img.complete) {
+            const containerWidth = containerRef.current.offsetWidth;
+            const aspectRatio = img.height / img.width;
+            const calculatedHeight = containerWidth * aspectRatio;
+            setContainerHeight(calculatedHeight);
+          }
+        };
+
+        img.onload = updateDimensions;
+        img.src = beforeSrc;
+
+        // Update on window resize
+        window.addEventListener('resize', updateDimensions);
+        return () => window.removeEventListener('resize', updateDimensions);
+      }, [beforeSrc]);
+
       return (
         <div
           ref={containerRef}
           className="comparison-slider rounded-2xl overflow-hidden card"
+          style={{
+            height: containerHeight ? `${containerHeight}px` : 'auto',
+            minHeight: containerHeight ? `${containerHeight}px` : '400px'
+          }}
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -1117,14 +1152,23 @@
           onDragStart={(e) => e.preventDefault()}
         >
           {/* Base layer: Original (before) image */}
-          <img src={beforeSrc} alt="Before" className="w-full" draggable="false" />
+          <img
+            ref={beforeImgRef}
+            src={beforeSrc}
+            alt="Before"
+            draggable="false"
+          />
 
           {/* Overlay: AI generated (after) image that gets revealed */}
           <div
             className="comparison-after"
             style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
           >
-            <img src={afterSrc} alt="After" className="w-full" draggable="false" />
+            <img
+              src={afterSrc}
+              alt="After"
+              draggable="false"
+            />
           </div>
 
           <div
@@ -1442,6 +1486,115 @@
 
       const [generatedResult, setGeneratedResult] = useState(null);
 
+      // Function to get EXIF orientation and correct image rotation
+      const getOrientedImage = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onload = (e) => {
+            const img = new Image();
+
+            img.onload = () => {
+              // Create canvas to draw the correctly oriented image
+              const canvas = document.createElement('canvas');
+              const ctx = canvas.getContext('2d');
+
+              // Get EXIF orientation
+              const arrayBuffer = e.target.result;
+              const view = new DataView(arrayBuffer);
+
+              let orientation = 1; // Default orientation
+
+              // Check for JPEG signature
+              if (view.getUint16(0, false) === 0xFFD8) {
+                const length = view.byteLength;
+                let offset = 2;
+
+                while (offset < length) {
+                  if (view.getUint16(offset + 2, false) <= 8) break;
+                  const marker = view.getUint16(offset, false);
+                  offset += 2;
+
+                  if (marker === 0xFFE1) {
+                    // EXIF marker
+                    offset += 2;
+                    if (view.getUint32(offset, false) !== 0x45786966) {
+                      break;
+                    }
+
+                    const little = view.getUint16(offset += 6, false) === 0x4949;
+                    offset += view.getUint32(offset + 4, little);
+                    const tags = view.getUint16(offset, little);
+                    offset += 2;
+
+                    for (let i = 0; i < tags; i++) {
+                      if (view.getUint16(offset + (i * 12), little) === 0x0112) {
+                        orientation = view.getUint16(offset + (i * 12) + 8, little);
+                        break;
+                      }
+                    }
+                    break;
+                  } else if ((marker & 0xFF00) !== 0xFF00) {
+                    break;
+                  } else {
+                    offset += view.getUint16(offset, false);
+                  }
+                }
+              }
+
+              // Set canvas dimensions based on orientation
+              if (orientation > 4) {
+                canvas.width = img.height;
+                canvas.height = img.width;
+              } else {
+                canvas.width = img.width;
+                canvas.height = img.height;
+              }
+
+              // Transform context based on orientation
+              switch (orientation) {
+                case 2:
+                  ctx.transform(-1, 0, 0, 1, img.width, 0);
+                  break;
+                case 3:
+                  ctx.transform(-1, 0, 0, -1, img.width, img.height);
+                  break;
+                case 4:
+                  ctx.transform(1, 0, 0, -1, 0, img.height);
+                  break;
+                case 5:
+                  ctx.transform(0, 1, 1, 0, 0, 0);
+                  break;
+                case 6:
+                  ctx.transform(0, 1, -1, 0, img.height, 0);
+                  break;
+                case 7:
+                  ctx.transform(0, -1, -1, 0, img.height, img.width);
+                  break;
+                case 8:
+                  ctx.transform(0, -1, 1, 0, 0, img.width);
+                  break;
+                default:
+                  break;
+              }
+
+              // Draw image with correct orientation
+              ctx.drawImage(img, 0, 0);
+
+              // Convert to base64
+              const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+              resolve(base64Image);
+            };
+
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = URL.createObjectURL(file);
+          };
+
+          reader.onerror = () => reject(new Error('Failed to read file'));
+          reader.readAsArrayBuffer(file);
+        });
+      };
+
       // Handle file upload (from input or drop)
       const handleFileUpload = async (file) => {
         if (!file || !file.type.startsWith('image/')) {
@@ -1453,44 +1606,34 @@
         setError(null);
 
         try {
-          // Convert image to base64
-          const reader = new FileReader();
-          reader.onload = (e) => {
-            const base64Image = e.target.result;
+          // Get correctly oriented image
+          const base64Image = await getOrientedImage(file);
 
-            // Create image object
-            const uploadedImage = {
-              id: 1,
-              url: base64Image,
-              originalUrl: base64Image,
-              room: 'unknown',
-              caption: file.name
-            };
-
-            // Set image and go directly to configuration (Step 3)
-            setPropertyImages([uploadedImage]);
-            setSelectedImage(uploadedImage);
-
-            setPropertyInfo({
-              address: 'Uploaded Image',
-              price: '',
-              bedrooms: 0,
-              bathrooms: 0,
-              propertyType: ''
-            });
-
-            setIsLoading(false);
-            setActiveToggleId('room'); // Start with Room Type open
-            setStep(3);
-            window.scrollTo(0, 0);
+          // Create image object
+          const uploadedImage = {
+            id: 1,
+            url: base64Image,
+            originalUrl: base64Image,
+            room: 'unknown',
+            caption: file.name
           };
 
-          reader.onerror = () => {
-            setError('Failed to read image file. Please try again.');
-            setIsLoading(false);
-          };
+          // Set image and go directly to configuration (Step 3)
+          setPropertyImages([uploadedImage]);
+          setSelectedImage(uploadedImage);
 
-          reader.readAsDataURL(file);
+          setPropertyInfo({
+            address: 'Uploaded Image',
+            price: '',
+            bedrooms: 0,
+            bathrooms: 0,
+            propertyType: ''
+          });
+
+          setIsLoading(false);
+          setActiveToggleId('room'); // Start with Room Type open
+          setStep(3);
+          window.scrollTo(0, 0);
         } catch (err) {
           setError('Failed to process image. Please try again.');
           setIsLoading(false);
