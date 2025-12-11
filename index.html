@@ -1343,7 +1343,9 @@
       const [homepageSubtitle] = useState(() =>
         HOMEPAGE_SUBTITLES[Math.floor(Math.random() * HOMEPAGE_SUBTITLES.length)]
       );
-      
+      const [isDragging, setIsDragging] = useState(false);
+      const fileInputRef = useRef(null);
+
       const [propertyInfo, setPropertyInfo] = useState(null);
       const [propertyImages, setPropertyImages] = useState([]);
       const [selectedImage, setSelectedImage] = useState(null);
@@ -1439,6 +1441,98 @@
       const [extraNotes, setExtraNotes] = useState('');
 
       const [generatedResult, setGeneratedResult] = useState(null);
+
+      // Handle file upload (from input or drop)
+      const handleFileUpload = async (file) => {
+        if (!file || !file.type.startsWith('image/')) {
+          setError('Please upload a valid image file (JPEG, PNG, etc.)');
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+          // Convert image to base64
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const base64Image = e.target.result;
+
+            // Create image object
+            const uploadedImage = {
+              id: 1,
+              url: base64Image,
+              originalUrl: base64Image,
+              room: 'unknown',
+              caption: file.name
+            };
+
+            // Set image and go directly to configuration (Step 3)
+            setPropertyImages([uploadedImage]);
+            setSelectedImage(uploadedImage);
+
+            setPropertyInfo({
+              address: 'Uploaded Image',
+              price: '',
+              bedrooms: 0,
+              bathrooms: 0,
+              propertyType: ''
+            });
+
+            setIsLoading(false);
+            setActiveToggleId('room'); // Start with Room Type open
+            setStep(3);
+            window.scrollTo(0, 0);
+          };
+
+          reader.onerror = () => {
+            setError('Failed to read image file. Please try again.');
+            setIsLoading(false);
+          };
+
+          reader.readAsDataURL(file);
+        } catch (err) {
+          setError('Failed to process image. Please try again.');
+          setIsLoading(false);
+        }
+      };
+
+      // Drag and drop handlers
+      const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+      };
+
+      const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+      };
+
+      const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      };
+
+      // File input change handler
+      const handleFileInputChange = (e) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+          handleFileUpload(files[0]);
+        }
+      };
 
       const fetchPropertyImages = async (url) => {
         setIsLoading(true);
@@ -1621,7 +1715,16 @@
         setGardenStyle(null);
         setExtraNotes('');
         setError(null);
-        setStep(2);
+
+        // If there's only 1 image (uploaded image), go back to Step 1
+        // Otherwise go to Step 2 (image selection)
+        if (propertyImages.length === 1 && propertyImages[0].caption) {
+          setStep(1);
+          setPropertyImages([]);
+          setPropertyInfo(null);
+        } else {
+          setStep(2);
+        }
       };
 
       return (
@@ -1649,7 +1752,7 @@
 
           <main className="max-w-5xl mx-auto px-6 py-12">
             
-            {/* Step 1: URL Input */}
+            {/* Step 1: URL Input or File Upload */}
             {step === 1 && (
               <div className="max-w-xl mx-auto text-center fade-in">
                 <RotatingHeadline />
@@ -1661,7 +1764,7 @@
                   <label className="block text-left text-sm font-medium mb-3 text-linen-700">
                     Rightmove URL
                   </label>
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3 mb-6">
                     <input
                       type="url"
                       value={rightmoveUrl}
@@ -1690,7 +1793,74 @@
                       ) : 'Fetch Property'}
                     </button>
                   </div>
-                  
+
+                  {/* Divider */}
+                  <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-linen-300"></div>
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-linen-100 px-3 text-linen-500">Or</span>
+                    </div>
+                  </div>
+
+                  {/* Drag & Drop / Upload Zone */}
+                  <div
+                    className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-200 ${
+                      isDragging
+                        ? 'border-linen-700 bg-linen-200/50'
+                        : 'border-linen-300 hover:border-linen-400 hover:bg-linen-100/50'
+                    }`}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                    />
+
+                    <div className="text-center">
+                      <svg
+                        className="mx-auto h-12 w-12 text-linen-400 mb-4"
+                        stroke="currentColor"
+                        fill="none"
+                        viewBox="0 0 48 48"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                          strokeWidth={2}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <p className="text-sm text-linen-700 mb-2">
+                        <span className="font-medium">Drop an image here</span>
+                        <span className="text-linen-500"> or</span>
+                      </p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading}
+                        className="btn-secondary text-sm"
+                      >
+                        <svg className="inline-block w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Choose from device
+                      </button>
+                      <p className="text-xs text-linen-500 mt-3">
+                        JPEG, PNG, WebP up to 10MB
+                      </p>
+                    </div>
+                  </div>
+
                   {error && (
                     <p className="text-red-600 text-sm mt-4 text-left">{error}</p>
                   )}
@@ -1738,14 +1908,14 @@
             {/* Step 3: Configure */}
             {step === 3 && selectedImage && (
               <div className="fade-in">
-                <button 
+                <button
                   onClick={goBackToSelection}
                   className="flex items-center gap-2 text-linen-600 hover:text-linen-800 mb-6 transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                  Back to images
+                  {propertyImages.length === 1 && propertyImages[0].caption ? 'Back to upload' : 'Back to images'}
                 </button>
                 
                 <div className="grid lg:grid-cols-2 gap-10">

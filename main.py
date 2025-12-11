@@ -201,7 +201,7 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         'dining': 'appropriate dining furniture like table and chairs, statement lighting',
         'bathroom': 'appropriate bathroom fixtures like updated vanity, modern taps, quality tiles',
         'office': 'appropriate office furniture like desk, ergonomic chair, task lighting',
-        'hallway': 'appropriate hallway elements like console table, runner rug, wall lighting',
+        'hallway': 'MINIMAL hallway elements ONLY - possibly a console table if space genuinely allows, but NO other furniture whatsoever',
         'garden': 'landscaped garden features',
         'outdoor': 'outdoor furniture and landscaping elements',
     }
@@ -332,7 +332,49 @@ def build_renovation_prompt(request: RenovationRequest) -> str:
         prompt_parts.append("Photorealistic result, professional landscape photography quality, natural daylight.")
 
         return " ".join(prompt_parts)
-    
+
+    # Special handling for hallways
+    if request.room_type == 'hallway':
+        prompt_parts = [
+            "CRITICAL NON-NEGOTIABLE RULE #1 - EXACT ROOM DIMENSIONS: The hallway MUST remain the EXACT same size and shape. DO NOT enlarge, shrink, expand, or resize the hallway in any dimension. Keep all walls in their exact original positions. This hallway may be small or tight - that is COMPLETELY FINE and MUST be preserved exactly as is.",
+            "CRITICAL NON-NEGOTIABLE RULE #2 - DOORS AND WINDOWS: If there are ANY doors or windows in this hallway, you MUST leave them EXACTLY where they are - same position, same size, same shape, same number. DO NOT move, resize, add, or remove ANY doors or windows. ABSOLUTELY NO NEW WINDOWS OR DOORS OF ANY KIND.",
+            "CRITICAL NON-NEGOTIABLE RULE #3 - CAMERA PERSPECTIVE: Keep the EXACT same camera angle, viewpoint, and perspective as the input photo. DO NOT change the viewing angle or create a different perspective.",
+            "CRITICAL NON-NEGOTIABLE RULE #4 - NO FURNITURE: DO NOT add ANY furniture to this hallway except POSSIBLY a slim console table ONLY if there is genuinely sufficient space. NO chairs, NO benches, NO storage units, NO shoe racks. Keep the hallway open and uncluttered. When in doubt, add NO furniture at all.",
+            "CRITICAL NON-NEGOTIABLE RULE #5 - PRESERVE EXACT LAYOUT: Keep the exact layout, width, and flow of the hallway. If the hallway is narrow or tight, maintain that exact narrowness. DO NOT try to make it appear wider or more spacious.",
+            "EDIT THE PROVIDED PHOTOGRAPH. Do not create a new image - modify the existing photo only.",
+            "ONLY CHANGE: paint colours, flooring material, wall lighting, and minimal decor like wall art or mirror.",
+            "DO NOT CHANGE: room size, room shape, wall positions, hallway width, ceiling height, windows, doors, camera perspective, or add furniture.",
+        ]
+
+        # Style
+        if request.style and request.style in style_prompts:
+            prompt_parts.append(f"Apply {style_prompts[request.style]}.")
+
+        # Add time of day if specified
+        if request.time_of_day and request.time_of_day in time_of_day_prompts:
+            prompt_parts.append(f"Lighting: {time_of_day_prompts[request.time_of_day]}.")
+
+        # Add colour scheme if specified
+        if request.colour_scheme and request.colour_scheme in colour_scheme_prompts:
+            prompt_parts.append(f"Colours: {colour_scheme_prompts[request.colour_scheme]}.")
+
+        # Add flooring if specified
+        if request.flooring and request.flooring in flooring_prompts:
+            prompt_parts.append(f"Flooring: {flooring_prompts[request.flooring]}.")
+
+        # Add wallpaper if specified
+        if request.wallpaper and request.wallpaper in wallpaper_prompts:
+            prompt_parts.append(f"Wall treatment: {wallpaper_prompts[request.wallpaper]}.")
+
+        # Add extra notes if provided
+        if request.extra_notes:
+            prompt_parts.append(f"Also: {request.extra_notes}")
+
+        # Final quality reminder
+        prompt_parts.append("Photorealistic result, professional interior photography quality. Remember: NO furniture except possibly a slim console table if space genuinely allows.")
+
+        return " ".join(prompt_parts)
+
     # Standard interior renovation prompt
     prompt_parts = [
         "CRITICAL NON-NEGOTIABLE RULE #1 - EXACT ROOM DIMENSIONS: The room MUST remain the EXACT same size and shape. DO NOT enlarge, shrink, expand, or resize the room in any dimension. The room's width, length, height, and overall volume must be IDENTICAL to the original photo. Keep all walls in their exact original positions.",
