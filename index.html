@@ -1487,111 +1487,31 @@
       const [generatedResult, setGeneratedResult] = useState(null);
 
       // Function to get EXIF orientation and correct image rotation
-      const getOrientedImage = (file) => {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
+      const getOrientedImage = async (file) => {
+        return new Promise(async (resolve, reject) => {
+          try {
+            // Use createImageBitmap with imageOrientation: 'flipY' to handle EXIF automatically
+            // This ensures the image is correctly oriented without manual transformation
+            const imageBitmap = await createImageBitmap(file, {
+              imageOrientation: 'from-image' // Respect EXIF orientation
+            });
 
-          reader.onload = (e) => {
-            const img = new Image();
+            // Create canvas with the correct dimensions
+            const canvas = document.createElement('canvas');
+            canvas.width = imageBitmap.width;
+            canvas.height = imageBitmap.height;
 
-            img.onload = () => {
-              // Create canvas to draw the correctly oriented image
-              const canvas = document.createElement('canvas');
-              const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
 
-              // Get EXIF orientation
-              const arrayBuffer = e.target.result;
-              const view = new DataView(arrayBuffer);
+            // Draw the image (already correctly oriented by createImageBitmap)
+            ctx.drawImage(imageBitmap, 0, 0);
 
-              let orientation = 1; // Default orientation
-
-              // Check for JPEG signature
-              if (view.getUint16(0, false) === 0xFFD8) {
-                const length = view.byteLength;
-                let offset = 2;
-
-                while (offset < length) {
-                  if (view.getUint16(offset + 2, false) <= 8) break;
-                  const marker = view.getUint16(offset, false);
-                  offset += 2;
-
-                  if (marker === 0xFFE1) {
-                    // EXIF marker
-                    offset += 2;
-                    if (view.getUint32(offset, false) !== 0x45786966) {
-                      break;
-                    }
-
-                    const little = view.getUint16(offset += 6, false) === 0x4949;
-                    offset += view.getUint32(offset + 4, little);
-                    const tags = view.getUint16(offset, little);
-                    offset += 2;
-
-                    for (let i = 0; i < tags; i++) {
-                      if (view.getUint16(offset + (i * 12), little) === 0x0112) {
-                        orientation = view.getUint16(offset + (i * 12) + 8, little);
-                        break;
-                      }
-                    }
-                    break;
-                  } else if ((marker & 0xFF00) !== 0xFF00) {
-                    break;
-                  } else {
-                    offset += view.getUint16(offset, false);
-                  }
-                }
-              }
-
-              // Set canvas dimensions based on orientation
-              if (orientation > 4) {
-                canvas.width = img.height;
-                canvas.height = img.width;
-              } else {
-                canvas.width = img.width;
-                canvas.height = img.height;
-              }
-
-              // Transform context based on orientation
-              switch (orientation) {
-                case 2:
-                  ctx.transform(-1, 0, 0, 1, img.width, 0);
-                  break;
-                case 3:
-                  ctx.transform(-1, 0, 0, -1, img.width, img.height);
-                  break;
-                case 4:
-                  ctx.transform(1, 0, 0, -1, 0, img.height);
-                  break;
-                case 5:
-                  ctx.transform(0, 1, 1, 0, 0, 0);
-                  break;
-                case 6:
-                  ctx.transform(0, 1, -1, 0, img.height, 0);
-                  break;
-                case 7:
-                  ctx.transform(0, -1, -1, 0, img.height, img.width);
-                  break;
-                case 8:
-                  ctx.transform(0, -1, 1, 0, 0, img.width);
-                  break;
-                default:
-                  break;
-              }
-
-              // Draw image with correct orientation
-              ctx.drawImage(img, 0, 0);
-
-              // Convert to base64
-              const base64Image = canvas.toDataURL('image/jpeg', 0.95);
-              resolve(base64Image);
-            };
-
-            img.onerror = () => reject(new Error('Failed to load image'));
-            img.src = URL.createObjectURL(file);
-          };
-
-          reader.onerror = () => reject(new Error('Failed to read file'));
-          reader.readAsArrayBuffer(file);
+            // Convert to base64
+            const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+            resolve(base64Image);
+          } catch (error) {
+            reject(error);
+          }
         });
       };
 
