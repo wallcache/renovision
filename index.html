@@ -2070,7 +2070,8 @@
                       className="rounded-2xl aspect-[4/3] flex flex-col items-center justify-center"
                       style={{
                         background: '#FFFFFF',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)'
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)',
+                        isolation: 'isolate'
                       }}
                     >
                       {/* Logo animation */}
@@ -2079,13 +2080,12 @@
                         loop
                         muted
                         playsInline
-                        className="mb-6"
+                        className="mb-6 w-24 h-24 md:w-32 md:h-32"
                         style={{
-                          width: '86px',
-                          height: '86px',
                           mixBlendMode: 'multiply',
-                          filter: 'contrast(1.05)',
-                          display: 'block'
+                          filter: 'contrast(1.2) brightness(0.95)',
+                          display: 'block',
+                          opacity: 0.95
                         }}
                       >
                         <source src="renovision_animation.mp4" type="video/mp4" />
