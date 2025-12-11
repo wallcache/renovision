@@ -438,7 +438,6 @@ async def fetch_image_as_base64(url: str) -> str:
             header, base64_data = url.split(',', 1)
 
             # Decode the base64 data to validate it's a real image
-            import base64
             image_bytes = base64.b64decode(base64_data)
 
             # Open with PIL to validate and potentially resize
