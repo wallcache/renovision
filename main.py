@@ -429,6 +429,41 @@ async def fetch_image_as_base64(url: str) -> str:
     if not url or not url.strip():
         raise HTTPException(status_code=400, detail="Image URL cannot be empty")
 
+    # Check if this is a data URI (uploaded image)
+    if url.startswith('data:image'):
+        print(f"[DEBUG] Processing uploaded image (data URI)")
+        try:
+            # Extract the base64 data from the data URI
+            # Format: data:image/jpeg;base64,<base64-data>
+            header, base64_data = url.split(',', 1)
+
+            # Decode the base64 data to validate it's a real image
+            import base64
+            image_bytes = base64.b64decode(base64_data)
+
+            # Open with PIL to validate and potentially resize
+            img = Image.open(BytesIO(image_bytes))
+
+            # Resize if larger than 2048 on any side (Gemini's recommended max)
+            max_size = 2048
+            if max(img.size) > max_size:
+                ratio = max_size / max(img.size)
+                new_size = tuple(int(dim * ratio) for dim in img.size)
+                img = img.resize(new_size, Image.LANCZOS)
+
+            # Convert to RGB if necessary (remove alpha channel)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+
+            # Save to bytes
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=90)
+            return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+        except Exception as e:
+            print(f"[ERROR] Failed to process uploaded image: {e}")
+            raise HTTPException(status_code=400, detail=f"Invalid image data: {str(e)}")
+
     # Clean up the URL - remove any double encoding issues
     import urllib.parse
 
