@@ -923,15 +923,14 @@
       );
     }
 
-    // Sparkling house animation component - cycles through 4 SVG frames
-    // Sequence: ani0 → ani1 → ani2 → ani3 → ani0 → ...
+    // Sparkling house animation component - randomly picks from 4 SVG frames
     function SparklingHouseAnimation() {
       const [frameIndex, setFrameIndex] = useState(0);
       const frames = ['ani0.svg', 'ani1.svg', 'ani2.svg', 'ani3.svg'];
 
       useEffect(() => {
         const interval = setInterval(() => {
-          setFrameIndex(prev => (prev + 1) % frames.length);
+          setFrameIndex(Math.floor(Math.random() * frames.length));
         }, 250); // 250ms (0.25 seconds) per frame
 
         return () => clearInterval(interval);
