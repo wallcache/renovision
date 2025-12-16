@@ -453,6 +453,7 @@
     
     // Toggle options
     const DESIGN_STYLE_OPTIONS = [
+      { id: 'english_contemporary', label: 'English Contemporary' },
       { id: 'modern_organic', label: 'Modern Organic' },
       { id: 'scandinavian_minimalism', label: 'Scandinavian Minimalism' },
       { id: 'japandi', label: 'Japandi' },
@@ -461,7 +462,6 @@
       { id: 'midcentury_modern', label: 'Mid-Century Modern' },
       { id: 'moody_contemporary', label: 'Moody Contemporary' },
       { id: 'rustic_modern', label: 'Rustic Modern' },
-      { id: 'english_contemporary', label: 'English Contemporary' },
     ];
 
     const ROOM_TYPE_OPTIONS = [
@@ -920,6 +920,34 @@
         <p className={`text-linen-600 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           {LOADING_MESSAGES[messageIndex]}
         </p>
+      );
+    }
+
+    // Sparkling house animation component - cycles through 4 SVG frames
+    function SparklingHouseAnimation() {
+      const [frameIndex, setFrameIndex] = useState(0);
+      const frames = ['ani0.svg', 'ani1.svg', 'ani2.svg', 'ani3.svg'];
+
+      useEffect(() => {
+        const interval = setInterval(() => {
+          setFrameIndex(prev => (prev + 1) % frames.length);
+        }, 150); // 150ms per frame for smooth animation
+
+        return () => clearInterval(interval);
+      }, []);
+
+      return (
+        <img
+          src={frames[frameIndex]}
+          alt="Loading animation"
+          className="mb-6 w-24 h-24 md:w-32 md:h-32"
+          style={{
+            mixBlendMode: 'multiply',
+            filter: 'contrast(1.2) brightness(0.95)',
+            display: 'block',
+            opacity: 0.95
+          }}
+        />
       );
     }
 
@@ -2074,22 +2102,8 @@
                         isolation: 'isolate'
                       }}
                     >
-                      {/* Logo animation */}
-                      <video
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="mb-6 w-24 h-24 md:w-32 md:h-32"
-                        style={{
-                          mixBlendMode: 'multiply',
-                          filter: 'contrast(1.2) brightness(0.95)',
-                          display: 'block',
-                          opacity: 0.95
-                        }}
-                      >
-                        <source src="renovision_animation.mp4" type="video/mp4" />
-                      </video>
+                      {/* Sparkling house animation */}
+                      <SparklingHouseAnimation />
 
                       {/* Loading text directly under logo */}
                       <div className="text-center px-8">
