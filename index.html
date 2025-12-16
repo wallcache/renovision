@@ -924,6 +924,7 @@
     }
 
     // Sparkling house animation component - cycles through 4 SVG frames
+    // Sequence: ani0 → ani1 → ani2 → ani3 → ani0 → ...
     function SparklingHouseAnimation() {
       const [frameIndex, setFrameIndex] = useState(0);
       const frames = ['ani0.svg', 'ani1.svg', 'ani2.svg', 'ani3.svg'];
@@ -931,7 +932,7 @@
       useEffect(() => {
         const interval = setInterval(() => {
           setFrameIndex(prev => (prev + 1) % frames.length);
-        }, 150); // 150ms per frame for smooth animation
+        }, 250); // 250ms (0.25 seconds) per frame
 
         return () => clearInterval(interval);
       }, []);
@@ -1412,9 +1413,7 @@
       const [rightmoveUrl, setRightmoveUrl] = useState('');
       const [isLoading, setIsLoading] = useState(false);
       const [error, setError] = useState(null);
-      const [homepageSubtitle] = useState(() =>
-        HOMEPAGE_SUBTITLES[Math.floor(Math.random() * HOMEPAGE_SUBTITLES.length)]
-      );
+      const homepageSubtitle = "Paste a Rightmove link or upload an image.";
       const [isDragging, setIsDragging] = useState(false);
       const fileInputRef = useRef(null);
 
