@@ -1163,22 +1163,22 @@
         // Call the onChange handler
         onChange(optionId);
 
-        // Auto-scroll down by the height of one pill
+        // Auto-scroll down by the height of one pill + extra spacing
         setTimeout(() => {
           // Get the height of the clicked pill
           if (pillRefs.current[currentIndex]) {
             const pill = pillRefs.current[currentIndex];
             const pillHeight = pill.getBoundingClientRect().height;
 
-            // Scroll down by the pill height (includes gap between pills)
-            const scrollAmount = pillHeight + 8; // 8px for the gap between pills
+            // Scroll down by pill height * 1.3 for better positioning
+            const scrollAmount = pillHeight * 1.3;
 
             window.scrollBy({
               top: scrollAmount,
               behavior: 'smooth'
             });
           }
-        }, 50);
+        }, 80); // Slightly longer delay for smoother feel
       };
 
       return (
