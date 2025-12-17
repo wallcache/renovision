@@ -769,26 +769,63 @@
     // Initialize Clerk
     let clerkInstance = null;
     let clerkLoaded = false;
-    let currentUser = null;
 
-    // Load Clerk asynchronously
-    (async () => {
+    // Load Clerk asynchronously (lazy load - only needed when generating)
+    async function ensureClerkLoaded() {
+      if (clerkLoaded) return clerkInstance;
+
       try {
-        // Wait for Clerk to be available on window
+        console.log('[Clerk] Initializing authentication...');
+
+        // Wait for Clerk SDK to be available
+        let attempts = 0;
+        while (!window.Clerk && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
         if (!window.Clerk) {
-          console.error('[Clerk] Clerk SDK not found on window');
-          return;
+          throw new Error('Clerk SDK failed to load from CDN');
         }
 
         clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
         await clerkInstance.load();
         clerkLoaded = true;
-        console.log('[Clerk] Authentication initialized successfully');
+        console.log('[Clerk] ✓ Authentication ready');
+        return clerkInstance;
       } catch (error) {
-        console.error('[Clerk] Failed to load:', error);
-        clerkLoaded = true; // Set to true to prevent infinite loading
+        console.error('[Clerk] Failed to initialize:', error);
+        throw error;
       }
-    })();
+    }
+
+    // Check if user is signed in, prompt if not
+    async function requireAuthentication() {
+      const clerk = await ensureClerkLoaded();
+
+      if (!clerk.user) {
+        // User not signed in - open sign-in modal
+        await clerk.openSignIn();
+
+        // Wait for sign-in to complete
+        return new Promise((resolve, reject) => {
+          const checkInterval = setInterval(() => {
+            if (clerk.user) {
+              clearInterval(checkInterval);
+              resolve(clerk.user);
+            }
+          }, 500);
+
+          // Timeout after 5 minutes
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            reject(new Error('Sign-in timeout'));
+          }, 300000);
+        });
+      }
+
+      return clerk.user;
+    }
 
     // Helper to get session token
     async function getClerkSessionToken() {
@@ -810,7 +847,12 @@
 
     async function authenticatedFetch(url, options = {}) {
       try {
-        const token = await getClerkSessionToken();
+        // Ensure user is authenticated (will prompt if not)
+        await requireAuthentication();
+
+        // Get session token
+        const clerk = await ensureClerkLoaded();
+        const token = await clerk.session.getToken();
 
         const headers = {
           ...options.headers,
@@ -825,14 +867,10 @@
         // Handle 401 specifically - session expired
         if (response.status === 401) {
           console.warn('[Auth] Session expired or invalid');
-
-          // Sign out and reload to show sign-in prompt
-          if (clerkInstance) {
-            await clerkInstance.signOut();
-            window.location.reload();
-          }
-
-          throw new Error('Session expired. Please sign in again.');
+          // Prompt for re-authentication
+          await requireAuthentication();
+          // Retry the request
+          return authenticatedFetch(url, options);
         }
 
         return response;
@@ -846,193 +884,6 @@
     // ============================================
     // COMPONENTS
     // ============================================
-
-    // Authentication Gate Component
-    function AuthGate({ children }) {
-      const [isLoading, setIsLoading] = useState(true);
-      const [isSignedIn, setIsSignedIn] = useState(false);
-      const [user, setUser] = useState(null);
-      const [error, setError] = useState(null);
-
-      useEffect(() => {
-        let attempts = 0;
-        const maxAttempts = 50; // 5 seconds total (50 * 100ms)
-
-        const checkAuth = async () => {
-          attempts++;
-
-          if (!clerkLoaded) {
-            if (attempts >= maxAttempts) {
-              setError('Authentication service failed to load. Please refresh the page.');
-              setIsLoading(false);
-              return;
-            }
-            // Wait for Clerk to load
-            setTimeout(checkAuth, 100);
-            return;
-          }
-
-          // Clerk loaded but failed to initialize
-          if (!clerkInstance) {
-            setError('Authentication not configured. Please contact support.');
-            setIsLoading(false);
-            return;
-          }
-
-          try {
-            const session = clerkInstance.session;
-            const currentUser = clerkInstance.user;
-
-            setIsSignedIn(!!session);
-            setUser(currentUser);
-            setIsLoading(false);
-          } catch (err) {
-            console.error('[AuthGate] Error checking session:', err);
-            setError('Authentication error. Please refresh the page.');
-            setIsLoading(false);
-          }
-        };
-
-        checkAuth();
-
-        // Listen for auth changes
-        if (clerkInstance && clerkLoaded) {
-          const unsubscribe = clerkInstance.addListener((event) => {
-            if (event.user || event.session) {
-              setIsSignedIn(!!clerkInstance.session);
-              setUser(clerkInstance.user);
-            }
-          });
-
-          return unsubscribe;
-        }
-      }, []);
-
-      if (isLoading) {
-        return (
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-linen-800 mx-auto mb-4"></div>
-              <p className="text-linen-600">Loading authentication...</p>
-            </div>
-          </div>
-        );
-      }
-
-      if (error) {
-        return (
-          <div className="min-h-screen flex items-center justify-center px-6">
-            <div className="max-w-md w-full text-center">
-              <div className="text-red-600 text-5xl mb-4">⚠️</div>
-              <h1 className="font-serif text-2xl text-linen-900 mb-4">Authentication Error</h1>
-              <p className="text-linen-600 mb-6">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="btn-primary"
-              >
-                Refresh Page
-              </button>
-            </div>
-          </div>
-        );
-      }
-
-      if (!isSignedIn) {
-        return <SignInPrompt />;
-      }
-
-      return children;
-    }
-
-    // Sign-in Prompt Component
-    function SignInPrompt() {
-      const handleSignIn = () => {
-        if (clerkInstance) {
-          clerkInstance.openSignIn({
-            appearance: {
-              elements: {
-                rootBox: "mx-auto",
-                card: "card rounded-2xl shadow-lg"
-              }
-            }
-          });
-        }
-      };
-
-      return (
-        <div className="min-h-screen flex items-center justify-center px-6">
-          <div className="max-w-md w-full text-center">
-            <img
-              src={LOGO_URL}
-              alt="Renovision"
-              className="logo-img mx-auto mb-8"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-
-            <h1 className="font-serif text-4xl text-linen-900 mb-4">
-              Welcome to Renovision
-            </h1>
-
-            <p className="text-linen-600 mb-8">
-              Sign in to start visualizing property renovations with AI.
-            </p>
-
-            <button
-              onClick={handleSignIn}
-              className="btn-primary text-lg"
-            >
-              Sign In to Continue
-            </button>
-
-            <p className="text-xs text-linen-500 mt-6">
-              Protected by Clerk authentication
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    // User Menu Component (for header)
-    function UserMenu() {
-      const [user, setUser] = useState(null);
-
-      useEffect(() => {
-        if (clerkInstance && clerkLoaded) {
-          setUser(clerkInstance.user);
-
-          const unsubscribe = clerkInstance.addListener((event) => {
-            if (event.user) {
-              setUser(clerkInstance.user);
-            }
-          });
-
-          return unsubscribe;
-        }
-      }, []);
-
-      const handleSignOut = async () => {
-        if (clerkInstance) {
-          await clerkInstance.signOut();
-          window.location.reload();
-        }
-      };
-
-      if (!user) return null;
-
-      return (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-linen-700 hidden sm:inline">
-            {user.firstName || user.emailAddresses[0]?.emailAddress}
-          </span>
-          <button
-            onClick={handleSignOut}
-            className="btn-secondary text-sm py-2 px-4"
-          >
-            Sign Out
-          </button>
-        </div>
-      );
-    }
 
     function TogglePill({ label, active, onClick }) {
       return (
@@ -1186,16 +1037,21 @@
           setTimeout(() => {
             setMessageIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
             setIsVisible(true); // fade in
-          }, 300);
+          }, 400); // Wait for fade out to complete before changing text
         }, 4000);
 
         return () => clearInterval(interval);
       }, []);
 
       return (
-        <p className={`text-linen-600 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
-          {LOADING_MESSAGES[messageIndex]}
-        </p>
+        <div className="min-h-[3rem] flex items-center justify-center">
+          <p
+            className={`text-linen-600 transition-opacity duration-300 absolute ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            style={{ transitionTimingFunction: 'ease-in-out' }}
+          >
+            {LOADING_MESSAGES[messageIndex]}
+          </p>
+        </div>
       );
     }
 
@@ -2093,24 +1949,27 @@
       };
 
       return (
-        <AuthGate>
-          <div className="min-h-screen">
-            {/* Header */}
-            <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
-              <div className="max-w-5xl mx-auto flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={LOGO_URL}
-                    alt="Renovision"
-                    className="logo-img cursor-pointer transition-opacity hover:opacity-70"
-                    onClick={resetApp}
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                </div>
-
-                <UserMenu />
+        <div className="min-h-screen">
+          {/* Header */}
+          <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <img
+                  src={LOGO_URL}
+                  alt="Renovision"
+                  className="logo-img cursor-pointer transition-opacity hover:opacity-70"
+                  onClick={resetApp}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
               </div>
-            </header>
+
+              {step > 1 && (
+                <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
+                  Start Over
+                </button>
+              )}
+            </div>
+          </header>
 
           <main className="max-w-5xl mx-auto px-6 py-12">
             
@@ -2472,8 +2331,7 @@
               </p>
             </div>
           </footer>
-          </div>
-        </AuthGate>
+        </div>
       );
     }
 
