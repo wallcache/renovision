@@ -774,14 +774,19 @@
     // Load Clerk asynchronously
     (async () => {
       try {
-        clerkInstance = window.Clerk;
-        await clerkInstance.load({
-          publishableKey: CLERK_PUBLISHABLE_KEY,
-        });
+        // Wait for Clerk to be available on window
+        if (!window.Clerk) {
+          console.error('[Clerk] Clerk SDK not found on window');
+          return;
+        }
+
+        clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+        await clerkInstance.load();
         clerkLoaded = true;
-        console.log('[Clerk] Authentication initialized');
+        console.log('[Clerk] Authentication initialized successfully');
       } catch (error) {
         console.error('[Clerk] Failed to load:', error);
+        clerkLoaded = true; // Set to true to prevent infinite loading
       }
     })();
 
@@ -847,27 +852,51 @@
       const [isLoading, setIsLoading] = useState(true);
       const [isSignedIn, setIsSignedIn] = useState(false);
       const [user, setUser] = useState(null);
+      const [error, setError] = useState(null);
 
       useEffect(() => {
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds total (50 * 100ms)
+
         const checkAuth = async () => {
-          if (!clerkInstance || !clerkLoaded) {
+          attempts++;
+
+          if (!clerkLoaded) {
+            if (attempts >= maxAttempts) {
+              setError('Authentication service failed to load. Please refresh the page.');
+              setIsLoading(false);
+              return;
+            }
             // Wait for Clerk to load
             setTimeout(checkAuth, 100);
             return;
           }
 
-          const session = clerkInstance.session;
-          const currentUser = clerkInstance.user;
+          // Clerk loaded but failed to initialize
+          if (!clerkInstance) {
+            setError('Authentication not configured. Please contact support.');
+            setIsLoading(false);
+            return;
+          }
 
-          setIsSignedIn(!!session);
-          setUser(currentUser);
-          setIsLoading(false);
+          try {
+            const session = clerkInstance.session;
+            const currentUser = clerkInstance.user;
+
+            setIsSignedIn(!!session);
+            setUser(currentUser);
+            setIsLoading(false);
+          } catch (err) {
+            console.error('[AuthGate] Error checking session:', err);
+            setError('Authentication error. Please refresh the page.');
+            setIsLoading(false);
+          }
         };
 
         checkAuth();
 
         // Listen for auth changes
-        if (clerkInstance) {
+        if (clerkInstance && clerkLoaded) {
           const unsubscribe = clerkInstance.addListener((event) => {
             if (event.user || event.session) {
               setIsSignedIn(!!clerkInstance.session);
@@ -885,6 +914,24 @@
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-linen-800 mx-auto mb-4"></div>
               <p className="text-linen-600">Loading authentication...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (error) {
+        return (
+          <div className="min-h-screen flex items-center justify-center px-6">
+            <div className="max-w-md w-full text-center">
+              <div className="text-red-600 text-5xl mb-4">⚠️</div>
+              <h1 className="font-serif text-2xl text-linen-900 mb-4">Authentication Error</h1>
+              <p className="text-linen-600 mb-6">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="btn-primary"
+              >
+                Refresh Page
+              </button>
             </div>
           </div>
         );
