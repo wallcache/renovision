@@ -18,3 +18,5 @@ services:
     envVars:
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/.cache/ms-playwright
+      - key: CLERK_SECRET_KEY
+        sync: false  # Must be configured manually in Render dashboard

@@ -437,6 +437,12 @@
 <body class="min-h-screen linen-texture">
   <div id="root"></div>
 
+  <!-- Clerk Authentication SDK -->
+  <script
+    crossorigin
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+  ></script>
+
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -755,9 +761,232 @@
     ];
 
     // ============================================
+    // CLERK AUTHENTICATION SETUP
+    // ============================================
+
+    const CLERK_PUBLISHABLE_KEY = 'pk_test_YOUR_KEY_HERE'; // Replace with actual key from Clerk dashboard
+
+    // Initialize Clerk
+    let clerkInstance = null;
+    let clerkLoaded = false;
+    let currentUser = null;
+
+    // Load Clerk asynchronously
+    (async () => {
+      try {
+        clerkInstance = window.Clerk;
+        await clerkInstance.load({
+          publishableKey: CLERK_PUBLISHABLE_KEY,
+        });
+        clerkLoaded = true;
+        console.log('[Clerk] Authentication initialized');
+      } catch (error) {
+        console.error('[Clerk] Failed to load:', error);
+      }
+    })();
+
+    // Helper to get session token
+    async function getClerkSessionToken() {
+      if (!clerkInstance || !clerkLoaded) {
+        throw new Error('Clerk not initialized');
+      }
+
+      const session = clerkInstance.session;
+      if (!session) {
+        throw new Error('No active session. Please sign in.');
+      }
+
+      return await session.getToken();
+    }
+
+    // ============================================
+    // AUTHENTICATED API HELPER
+    // ============================================
+
+    async function authenticatedFetch(url, options = {}) {
+      try {
+        const token = await getClerkSessionToken();
+
+        const headers = {
+          ...options.headers,
+          'Authorization': `Bearer ${token}`
+        };
+
+        const response = await fetch(url, {
+          ...options,
+          headers
+        });
+
+        // Handle 401 specifically - session expired
+        if (response.status === 401) {
+          console.warn('[Auth] Session expired or invalid');
+
+          // Sign out and reload to show sign-in prompt
+          if (clerkInstance) {
+            await clerkInstance.signOut();
+            window.location.reload();
+          }
+
+          throw new Error('Session expired. Please sign in again.');
+        }
+
+        return response;
+
+      } catch (error) {
+        console.error('[Auth] API request failed:', error);
+        throw error;
+      }
+    }
+
+    // ============================================
     // COMPONENTS
     // ============================================
-    
+
+    // Authentication Gate Component
+    function AuthGate({ children }) {
+      const [isLoading, setIsLoading] = useState(true);
+      const [isSignedIn, setIsSignedIn] = useState(false);
+      const [user, setUser] = useState(null);
+
+      useEffect(() => {
+        const checkAuth = async () => {
+          if (!clerkInstance || !clerkLoaded) {
+            // Wait for Clerk to load
+            setTimeout(checkAuth, 100);
+            return;
+          }
+
+          const session = clerkInstance.session;
+          const currentUser = clerkInstance.user;
+
+          setIsSignedIn(!!session);
+          setUser(currentUser);
+          setIsLoading(false);
+        };
+
+        checkAuth();
+
+        // Listen for auth changes
+        if (clerkInstance) {
+          const unsubscribe = clerkInstance.addListener((event) => {
+            if (event.user || event.session) {
+              setIsSignedIn(!!clerkInstance.session);
+              setUser(clerkInstance.user);
+            }
+          });
+
+          return unsubscribe;
+        }
+      }, []);
+
+      if (isLoading) {
+        return (
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-linen-800 mx-auto mb-4"></div>
+              <p className="text-linen-600">Loading authentication...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!isSignedIn) {
+        return <SignInPrompt />;
+      }
+
+      return children;
+    }
+
+    // Sign-in Prompt Component
+    function SignInPrompt() {
+      const handleSignIn = () => {
+        if (clerkInstance) {
+          clerkInstance.openSignIn({
+            appearance: {
+              elements: {
+                rootBox: "mx-auto",
+                card: "card rounded-2xl shadow-lg"
+              }
+            }
+          });
+        }
+      };
+
+      return (
+        <div className="min-h-screen flex items-center justify-center px-6">
+          <div className="max-w-md w-full text-center">
+            <img
+              src={LOGO_URL}
+              alt="Renovision"
+              className="logo-img mx-auto mb-8"
+              onError={(e) => { e.target.style.display = 'none'; }}
+            />
+
+            <h1 className="font-serif text-4xl text-linen-900 mb-4">
+              Welcome to Renovision
+            </h1>
+
+            <p className="text-linen-600 mb-8">
+              Sign in to start visualizing property renovations with AI.
+            </p>
+
+            <button
+              onClick={handleSignIn}
+              className="btn-primary text-lg"
+            >
+              Sign In to Continue
+            </button>
+
+            <p className="text-xs text-linen-500 mt-6">
+              Protected by Clerk authentication
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // User Menu Component (for header)
+    function UserMenu() {
+      const [user, setUser] = useState(null);
+
+      useEffect(() => {
+        if (clerkInstance && clerkLoaded) {
+          setUser(clerkInstance.user);
+
+          const unsubscribe = clerkInstance.addListener((event) => {
+            if (event.user) {
+              setUser(clerkInstance.user);
+            }
+          });
+
+          return unsubscribe;
+        }
+      }, []);
+
+      const handleSignOut = async () => {
+        if (clerkInstance) {
+          await clerkInstance.signOut();
+          window.location.reload();
+        }
+      };
+
+      if (!user) return null;
+
+      return (
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-linen-700 hidden sm:inline">
+            {user.firstName || user.emailAddresses[0]?.emailAddress}
+          </span>
+          <button
+            onClick={handleSignOut}
+            className="btn-secondary text-sm py-2 px-4"
+          >
+            Sign Out
+          </button>
+        </div>
+      );
+    }
+
     function TogglePill({ label, active, onClick }) {
       return (
         <button
@@ -1628,7 +1857,7 @@
         setError(null);
 
         try {
-          const response = await fetch(`${API_BASE_URL}/property`, {
+          const response = await authenticatedFetch(`${API_BASE_URL}/property`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
@@ -1657,7 +1886,7 @@
           const imagePromises = data.images.map(async (img) => {
             const originalUrl = img.url_high_res || img.url;
             try {
-              const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+              const proxyResponse = await authenticatedFetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
 
               if (!proxyResponse.ok) {
                 console.warn(`Failed to proxy image ${img.id}: HTTP ${proxyResponse.status}`);
@@ -1741,7 +1970,7 @@
             extra_notes: extraNotes || null
           });
 
-          const response = await fetch(`${API_BASE_URL}/renovate`, {
+          const response = await authenticatedFetch(`${API_BASE_URL}/renovate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestPayload)
@@ -1817,27 +2046,24 @@
       };
 
       return (
-        <div className="min-h-screen">
-          {/* Header */}
-          <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
-            <div className="max-w-5xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <img
-                  src={LOGO_URL}
-                  alt="Renovision"
-                  className="logo-img cursor-pointer transition-opacity hover:opacity-70"
-                  onClick={resetApp}
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              </div>
+        <AuthGate>
+          <div className="min-h-screen">
+            {/* Header */}
+            <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
+              <div className="max-w-5xl mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={LOGO_URL}
+                    alt="Renovision"
+                    className="logo-img cursor-pointer transition-opacity hover:opacity-70"
+                    onClick={resetApp}
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                </div>
 
-              {step > 1 && (
-                <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
-                  Start Over
-                </button>
-              )}
-            </div>
-          </header>
+                <UserMenu />
+              </div>
+            </header>
 
           <main className="max-w-5xl mx-auto px-6 py-12">
             
@@ -2199,7 +2425,8 @@
               </p>
             </div>
           </footer>
-        </div>
+          </div>
+        </AuthGate>
       );
     }
 

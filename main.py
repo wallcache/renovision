@@ -21,11 +21,13 @@ from datetime import datetime
 
 import httpx
 from PIL import Image
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 from dotenv import load_dotenv
+from clerk_backend_api import Clerk
+from clerk_backend_api.jwks_helpers import authenticate_request
 
 # Import our Rightmove scraper
 from rightmove_scraper import scrape_rightmove_listing, PropertyListing
@@ -39,6 +41,10 @@ load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
+
+# Clerk authentication configuration
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
+clerk_client = Clerk(bearer_auth=CLERK_SECRET_KEY) if CLERK_SECRET_KEY else None
 
 # Image generation provider: "gemini" or "replicate"
 # Gemini image gen is geo-blocked in some countries (UK, EU)
@@ -117,6 +123,58 @@ class RenovationResponse(BaseModel):
     room_type: Optional[str] = None
     style: Optional[str] = None
     configuration_applied: dict = {}
+
+# ============================================
+# AUTHENTICATION
+# ============================================
+
+async def verify_clerk_session(authorization: Optional[str] = Header(None)) -> dict:
+    """
+    FastAPI dependency to verify Clerk session tokens.
+    Extracts and validates the Bearer token from Authorization header.
+    Returns user data on success, raises HTTPException on failure.
+    """
+    if not CLERK_SECRET_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="Server misconfiguration: Authentication not properly configured"
+        )
+
+    if not authorization:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authentication. Please sign in to use this service."
+        )
+
+    # Extract Bearer token
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authorization header format. Expected: Bearer <token>"
+        )
+
+    session_token = parts[1]
+
+    try:
+        # Verify token using Clerk SDK
+        # The SDK handles JWKS fetching, caching, and signature verification
+        session = clerk_client.sessions.verify_token(session_token)
+
+        # Extract user information
+        return {
+            "user_id": session.user_id,
+            "session_id": session.id,
+            "status": session.status
+        }
+
+    except Exception as e:
+        # Token invalid, expired, or revoked
+        print(f"[AUTH] Token verification failed: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired session. Please sign in again."
+        )
 
 # ============================================
 # RIGHTMOVE SCRAPING (uses rightmove_scraper module)
@@ -831,19 +889,32 @@ async def list_available_models():
 
 
 @app.post("/property", response_model=PropertyResponse)
-async def get_property_images(request: RightmoveRequest):
+async def get_property_images(
+    request: RightmoveRequest,
+    user: dict = Depends(verify_clerk_session)
+):
     """
     Extract property images from a Rightmove listing URL.
     Returns list of images with detected room types.
+    REQUIRES AUTHENTICATION.
     """
+    # Optional: Log user activity
+    print(f"[INFO] Property fetch by user {user['user_id']}")
     return await get_property_from_rightmove(str(request.url))
 
 
 @app.get("/proxy-image")
-async def proxy_image(url: str):
+async def proxy_image(
+    url: str,
+    user: dict = Depends(verify_clerk_session)
+):
     """
     Proxy images from Rightmove - returns base64 encoded image data.
+    REQUIRES AUTHENTICATION.
     """
+    # Optional: Log user activity
+    print(f"[INFO] Image proxy by user {user['user_id']}")
+
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
@@ -873,14 +944,21 @@ async def proxy_image(url: str):
 
 
 @app.post("/renovate", response_model=RenovationResponse)
-async def generate_renovation(request: RenovationRequest):
+async def generate_renovation(
+    request: RenovationRequest,
+    user: dict = Depends(verify_clerk_session)
+):
     """
     Generate a renovated version of a room image.
     Returns the original URL and generated image as base64.
     Single image only - batch processing removed.
+    REQUIRES AUTHENTICATION.
 
     Bulletproof error handling with helpful JSON error messages.
     """
+    # Optional: Log user activity
+    print(f"[INFO] Renovation generation by user {user['user_id']}")
+
     try:
         # 1. Validate input parameters
         if not request.image_url or not request.image_url.strip():
