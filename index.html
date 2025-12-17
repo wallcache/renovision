@@ -449,10 +449,11 @@
   </script>
   <script
     id="clerk-sdk-script"
-    crossorigin
+    crossorigin="anonymous"
     data-clerk-publishable-key="pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ"
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4.72.5/dist/clerk.browser.js"
-    onload="console.log('[Clerk] ✅ SDK script (v4.72.5) loaded. window.Clerk type:', typeof window.Clerk); console.log('[Clerk] window.Clerk keys:', window.Clerk ? Object.keys(window.Clerk).slice(0, 10) : 'undefined');"
+    src="https://unpkg.com/@clerk/clerk-js@4.72.5/dist/clerk.browser.js"
+    type="text/javascript"
+    onload="console.log('[Clerk] ✅ SDK script (v4.72.5) loaded from unpkg. window.Clerk type:', typeof window.Clerk); console.log('[Clerk] window.Clerk keys:', window.Clerk ? Object.keys(window.Clerk).slice(0, 10) : 'undefined');"
     onerror="console.error('[Clerk] ❌ SDK script onerror fired - Failed to load from CDN'); console.error('[Clerk] This could be a network issue, CORS issue, or CDN availability problem');"
   ></script>
   <script>
