@@ -860,6 +860,9 @@
         }
 
         console.log('[Clerk] ✅ window.Clerk found! Type:', typeof window.Clerk);
+        console.log('[Clerk] window.Clerk properties:', Object.keys(window.Clerk || {}));
+        console.log('[Clerk] Is constructor:', typeof window.Clerk === 'function');
+        console.log('[Clerk] window.Clerk:', window.Clerk);
 
         // Verify publishable key
         console.log('[Clerk] Verifying publishable key...');
@@ -870,12 +873,29 @@
           console.warn('[Clerk] ⚠️  Using default/placeholder publishable key. Please update with your own key.');
         }
 
-        console.log('[Clerk] Creating Clerk instance...');
-        clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
-        console.log('[Clerk] Clerk instance created successfully');
+        console.log('[Clerk] Initializing Clerk instance...');
 
-        console.log('[Clerk] Loading Clerk instance...');
-        await clerkInstance.load();
+        // Try different initialization methods based on SDK version
+        if (typeof window.Clerk === 'function') {
+          // Old method: Constructor
+          console.log('[Clerk] Using constructor method: new window.Clerk()');
+          clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+          await clerkInstance.load();
+        } else if (window.Clerk && typeof window.Clerk.load === 'function') {
+          // New method: Direct load
+          console.log('[Clerk] Using direct load method: window.Clerk.load()');
+          await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
+          clerkInstance = window.Clerk;
+        } else if (window.Clerk && window.Clerk.default && typeof window.Clerk.default === 'function') {
+          // ES Module default export
+          console.log('[Clerk] Using default export: new window.Clerk.default()');
+          clerkInstance = new window.Clerk.default(CLERK_PUBLISHABLE_KEY);
+          await clerkInstance.load();
+        } else {
+          throw new Error('Unable to determine correct Clerk initialization method. window.Clerk type: ' + typeof window.Clerk);
+        }
+
+        console.log('[Clerk] Clerk instance loaded successfully');
 
         clerkLoaded = true;
         console.log('[Clerk] ✅ Authentication ready!');
