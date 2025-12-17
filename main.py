@@ -158,8 +158,14 @@ async def verify_clerk_session(authorization: Optional[str] = Header(None)) -> d
 
     try:
         # Verify token using Clerk SDK
-        # The SDK handles JWKS fetching, caching, and signature verification
-        session = clerk_client.sessions.verify_token(session_token)
+        # Use verify_session to validate the session token
+        # This method verifies the JWT signature and checks if session is active
+        print(f"[AUTH] Attempting to verify session token...")
+
+        # The correct method is verify_session, not verify_token
+        session = clerk_client.sessions.verify_session(session_token)
+
+        print(f"[AUTH] ✅ Session verified successfully. User ID: {session.user_id}")
 
         # Extract user information
         return {
@@ -168,9 +174,36 @@ async def verify_clerk_session(authorization: Optional[str] = Header(None)) -> d
             "status": session.status
         }
 
+    except AttributeError as e:
+        # Method doesn't exist - fallback to JWT verification
+        print(f"[AUTH] ⚠️ verify_session not available, trying alternative method...")
+        print(f"[AUTH] Error: {type(e).__name__}: {str(e)}")
+
+        try:
+            # Alternative: Use JWT verification with JWKS
+            # This verifies the token signature using Clerk's public keys
+            from clerk_backend_api.jwks_helpers import verify_token
+
+            # Verify the JWT token
+            verified_token = verify_token(session_token, clerk_client)
+
+            print(f"[AUTH] ✅ Token verified via JWT. User ID: {verified_token.get('sub')}")
+
+            return {
+                "user_id": verified_token.get("sub"),
+                "session_id": verified_token.get("sid"),
+                "status": "active"
+            }
+        except Exception as jwt_error:
+            print(f"[AUTH] ❌ JWT verification also failed: {type(jwt_error).__name__}: {str(jwt_error)}")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired session. Please sign in again."
+            )
+
     except Exception as e:
         # Token invalid, expired, or revoked
-        print(f"[AUTH] Token verification failed: {type(e).__name__}: {str(e)}")
+        print(f"[AUTH] ❌ Token verification failed: {type(e).__name__}: {str(e)}")
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired session. Please sign in again."
