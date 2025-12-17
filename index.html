@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Renovision. A Doer-Upper's Best Friend.</title>
-  <link rel="icon" type="image/png" href="favicon.png">
-  <link rel="apple-touch-icon" href="favicon.png">
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -455,7 +455,7 @@
     // ============================================
     
     const API_BASE_URL = 'https://renovision-5z2b.onrender.com';
-    const LOGO_URL = 'logo.png';
+    const LOGO_URL = 'assets/logo.png';
     
     // Toggle options
     const DESIGN_STYLE_OPTIONS = [
@@ -1202,7 +1202,7 @@
     // Sparkling house animation component - randomly picks from 4 SVG frames
     function SparklingHouseAnimation() {
       const [frameIndex, setFrameIndex] = useState(0);
-      const frames = ['ani0.svg', 'ani1.svg', 'ani2.svg', 'ani3.svg'];
+      const frames = ['assets/ani0.svg', 'assets/ani1.svg', 'assets/ani2.svg', 'assets/ani3.svg'];
 
       useEffect(() => {
         const interval = setInterval(() => {
