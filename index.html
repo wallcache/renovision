@@ -1080,7 +1080,7 @@
     function TogglePill({ label, active, onClick }) {
       return (
         <button
-          onClick={onClick}
+          onClick={(e) => onClick(e)}
           className={`toggle-pill ${active ? 'active' : ''}`}
         >
           {label}
@@ -1101,7 +1101,7 @@
 
       return (
         <button
-          onClick={onClick}
+          onClick={(e) => onClick(e)}
           className="toggle-pill"
           style={active ? {
             background: getTintedBackground(swatch),
@@ -1128,6 +1128,7 @@
 
     function AccordionToggleGroup({ label, options, value, onChange, isOpen, onToggle, useColourSwatches }) {
       const headerRef = useRef(null);
+      const pillRefs = useRef([]);
 
       const getSelectedLabel = () => {
         if (!value) return '';
@@ -1156,6 +1157,38 @@
             });
           }, 150); // Small delay to allow the accordion to start opening
         }
+      };
+
+      const handlePillClick = (optionId, currentIndex, event) => {
+        // Store the click position relative to the viewport
+        const clickY = event.clientY;
+
+        // Call the onChange handler
+        onChange(optionId);
+
+        // Auto-scroll to position the next pill at the click location
+        setTimeout(() => {
+          const nextIndex = currentIndex + 1;
+
+          // If there's a next pill, scroll it into position
+          if (nextIndex < options.length && pillRefs.current[nextIndex]) {
+            const nextPill = pillRefs.current[nextIndex];
+            const nextPillRect = nextPill.getBoundingClientRect();
+            const currentScrollY = window.scrollY || window.pageYOffset;
+
+            // Calculate how much to scroll so the next pill's center is at the click position
+            const nextPillCenter = nextPillRect.top + (nextPillRect.height / 2);
+            const scrollDelta = nextPillCenter - clickY;
+
+            // Only scroll if there's a meaningful difference (more than 10px)
+            if (Math.abs(scrollDelta) > 10) {
+              window.scrollTo({
+                top: currentScrollY + scrollDelta,
+                behavior: 'smooth'
+              });
+            }
+          }
+        }, 50); // Small delay to allow state update
       };
 
       return (
@@ -1188,22 +1221,24 @@
 
           <div className={`toggle-group-content ${isOpen ? 'expanded' : 'collapsed'}`}>
             <div className="toggle-group" style={{ paddingTop: '0.5rem' }}>
-              {options.map(option =>
+              {options.map((option, index) =>
                 useColourSwatches ? (
-                  <ColourTogglePill
-                    key={option.id}
-                    label={option.label}
-                    swatch={option.swatch}
-                    active={value === option.id}
-                    onClick={() => onChange(option.id)}
-                  />
+                  <div key={option.id} ref={el => pillRefs.current[index] = el}>
+                    <ColourTogglePill
+                      label={option.label}
+                      swatch={option.swatch}
+                      active={value === option.id}
+                      onClick={(e) => handlePillClick(option.id, index, e)}
+                    />
+                  </div>
                 ) : (
-                  <TogglePill
-                    key={option.id}
-                    label={option.label}
-                    active={value === option.id}
-                    onClick={() => onChange(option.id)}
-                  />
+                  <div key={option.id} ref={el => pillRefs.current[index] = el}>
+                    <TogglePill
+                      label={option.label}
+                      active={value === option.id}
+                      onClick={(e) => handlePillClick(option.id, index, e)}
+                    />
+                  </div>
                 )
               )}
             </div>
