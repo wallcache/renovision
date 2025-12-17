@@ -923,30 +923,26 @@ async def list_available_models():
 
 @app.post("/property", response_model=PropertyResponse)
 async def get_property_images(
-    request: RightmoveRequest,
-    user: dict = Depends(verify_clerk_session)
+    request: RightmoveRequest
 ):
     """
     Extract property images from a Rightmove listing URL.
     Returns list of images with detected room types.
-    REQUIRES AUTHENTICATION.
+    NO AUTHENTICATION REQUIRED - users can fetch property data before signing in.
     """
-    # Optional: Log user activity
-    print(f"[INFO] Property fetch by user {user['user_id']}")
+    print(f"[INFO] Property fetch (unauthenticated)")
     return await get_property_from_rightmove(str(request.url))
 
 
 @app.get("/proxy-image")
 async def proxy_image(
-    url: str,
-    user: dict = Depends(verify_clerk_session)
+    url: str
 ):
     """
     Proxy images from Rightmove - returns base64 encoded image data.
-    REQUIRES AUTHENTICATION.
+    NO AUTHENTICATION REQUIRED - users can fetch property images before signing in.
     """
-    # Optional: Log user activity
-    print(f"[INFO] Image proxy by user {user['user_id']}")
+    print(f"[INFO] Image proxy (unauthenticated)")
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
