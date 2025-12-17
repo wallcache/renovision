@@ -9,48 +9,51 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwindcss.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            serif: ['Cormorant Garamond', 'Georgia', 'serif'],
-            sans: ['Inter', 'system-ui', 'sans-serif'],
-          },
-          colors: {
-            linen: {
-              50: '#fdfcfb',
-              100: '#faf8f4',
-              200: '#f2efe9',
-              300: '#e8e4dc',
-              400: '#d4cfc4',
-              500: '#b8b1a4',
-              600: '#a89f93',
-              700: '#8a8278',
-              800: '#6b655c',
-              900: '#2c2c2c',
+    // Tailwind config must be defined before the CDN script loads
+    window.tailwind = {
+      config: {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+              sans: ['Inter', 'system-ui', 'sans-serif'],
             },
-            taupe: {
-              light: '#c4bbb0',
-              DEFAULT: '#a89f93',
-              dark: '#8a8278',
-            },
-            sage: {
-              light: '#d4ddd4',
-              DEFAULT: '#9aab9a',
-              dark: '#7a8f7a',
-            },
-            clay: {
-              light: '#e8d8cc',
-              DEFAULT: '#c9a88a',
-              dark: '#a68b6a',
+            colors: {
+              linen: {
+                50: '#fdfcfb',
+                100: '#faf8f4',
+                200: '#f2efe9',
+                300: '#e8e4dc',
+                400: '#d4cfc4',
+                500: '#b8b1a4',
+                600: '#a89f93',
+                700: '#8a8278',
+                800: '#6b655c',
+                900: '#2c2c2c',
+              },
+              taupe: {
+                light: '#c4bbb0',
+                DEFAULT: '#a89f93',
+                dark: '#8a8278',
+              },
+              sage: {
+                light: '#d4ddd4',
+                DEFAULT: '#9aab9a',
+                dark: '#7a8f7a',
+              },
+              clay: {
+                light: '#e8d8cc',
+                DEFAULT: '#c9a88a',
+                dark: '#a68b6a',
+              }
             }
           }
         }
       }
-    }
+    };
   </script>
+  <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * {
       box-sizing: border-box;
@@ -438,10 +441,55 @@
   <div id="root"></div>
 
   <!-- Clerk Authentication SDK -->
+  <script>
+    console.log('[Clerk] 🔄 Starting to load Clerk SDK from CDN...');
+    console.log('[Clerk] Timestamp:', new Date().toISOString());
+    console.log('[Clerk] Navigator online:', navigator.onLine);
+    console.log('[Clerk] User agent:', navigator.userAgent);
+  </script>
   <script
+    id="clerk-sdk-script"
     crossorigin
-    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    async
+    data-clerk-publishable-key="pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ"
+    src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    onload="console.log('[Clerk] ✅ SDK script onload fired. window.Clerk type:', typeof window.Clerk); console.log('[Clerk] window.Clerk:', window.Clerk);"
+    onerror="console.error('[Clerk] ❌ SDK script onerror fired - Failed to load from CDN'); console.error('[Clerk] This could be a network issue, CORS issue, or CDN availability problem');"
   ></script>
+  <script>
+    // Additional diagnostic logging after script tag
+    setTimeout(function() {
+      console.log('[Clerk] 📊 Checking Clerk SDK status after 1 second...');
+      console.log('[Clerk] window.Clerk exists:', typeof window.Clerk !== 'undefined');
+      console.log('[Clerk] window.Clerk type:', typeof window.Clerk);
+      if (window.Clerk) {
+        console.log('[Clerk] ✅ Clerk SDK is available!');
+        console.log('[Clerk] Clerk constructor:', window.Clerk);
+      } else {
+        console.error('[Clerk] ❌ Clerk SDK not found on window object after 1 second');
+        const scriptEl = document.getElementById('clerk-sdk-script');
+        if (scriptEl) {
+          console.log('[Clerk] 🔍 Script element debugging:');
+          console.log('  - Element exists:', true);
+          console.log('  - Script src:', scriptEl.src);
+          console.log('  - Script readyState:', scriptEl.readyState);
+          console.log('  - Script async:', scriptEl.async);
+          console.log('  - Script crossOrigin:', scriptEl.crossOrigin);
+        }
+        console.error('[Clerk] 💡 Troubleshooting tips:');
+        console.error('  1. Check browser console Network tab for failed requests');
+        console.error('  2. Verify internet connection is working');
+        console.error('  3. Try loading https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js directly in browser');
+        console.error('  4. Check for ad blockers or security extensions blocking the CDN');
+      }
+    }, 1000);
+
+    // Also check on page load
+    window.addEventListener('load', function() {
+      console.log('[Clerk] 📄 Page fully loaded event fired');
+      console.log('[Clerk] Final Clerk SDK check - window.Clerk:', typeof window.Clerk !== 'undefined' ? '✅ Available' : '❌ Not Available');
+    });
+  </script>
 
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -772,30 +820,77 @@
 
     // Load Clerk asynchronously (lazy load - only needed when generating)
     async function ensureClerkLoaded() {
-      if (clerkLoaded) return clerkInstance;
+      if (clerkLoaded && clerkInstance) {
+        console.log('[Clerk] ♻️  Using cached Clerk instance');
+        return clerkInstance;
+      }
 
       try {
-        console.log('[Clerk] Initializing authentication...');
+        console.log('[Clerk] 🔐 Initializing authentication...');
+        console.log('[Clerk] Checking for window.Clerk availability...');
 
-        // Wait for Clerk SDK to be available
+        // Wait for Clerk SDK to be available with timeout
         let attempts = 0;
-        while (!window.Clerk && attempts < 50) {
+        const maxAttempts = 50;
+        console.log('[Clerk] Will check up to', maxAttempts, 'times (5 seconds total)');
+
+        while (!window.Clerk && attempts < maxAttempts) {
+          if (attempts % 10 === 0) {
+            console.log(`[Clerk] ⏳ Waiting for SDK... (attempt ${attempts}/${maxAttempts})`);
+          }
           await new Promise(resolve => setTimeout(resolve, 100));
           attempts++;
         }
 
+        console.log(`[Clerk] Finished waiting after ${attempts} attempts (${attempts * 100}ms)`);
+
         if (!window.Clerk) {
-          throw new Error('Clerk SDK failed to load from CDN');
+          console.error('[Clerk] ❌ window.Clerk is still undefined after waiting');
+          console.error('[Clerk] Available window properties:', Object.keys(window).filter(k => k.toLowerCase().includes('clerk')));
+
+          // Check if script loaded
+          const scriptEl = document.getElementById('clerk-sdk-script');
+          if (scriptEl) {
+            console.error('[Clerk] Script element info:');
+            console.error('  - src:', scriptEl.src);
+            console.error('  - readyState:', scriptEl.readyState);
+          }
+
+          throw new Error('Clerk SDK failed to load from CDN. Please check your internet connection and try again.');
         }
 
+        console.log('[Clerk] ✅ window.Clerk found! Type:', typeof window.Clerk);
+
+        // Verify publishable key
+        console.log('[Clerk] Verifying publishable key...');
+        console.log('[Clerk] Key length:', CLERK_PUBLISHABLE_KEY ? CLERK_PUBLISHABLE_KEY.length : 0);
+        console.log('[Clerk] Key starts with:', CLERK_PUBLISHABLE_KEY ? CLERK_PUBLISHABLE_KEY.substring(0, 15) : 'undefined');
+
+        if (!CLERK_PUBLISHABLE_KEY || CLERK_PUBLISHABLE_KEY === 'pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ') {
+          console.warn('[Clerk] ⚠️  Using default/placeholder publishable key. Please update with your own key.');
+        }
+
+        console.log('[Clerk] Creating Clerk instance...');
         clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+        console.log('[Clerk] Clerk instance created successfully');
+
+        console.log('[Clerk] Loading Clerk instance...');
         await clerkInstance.load();
+
         clerkLoaded = true;
-        console.log('[Clerk] ✓ Authentication ready');
+        console.log('[Clerk] ✅ Authentication ready!');
+        console.log('[Clerk] User signed in:', !!clerkInstance.user);
+
         return clerkInstance;
       } catch (error) {
-        console.error('[Clerk] Failed to initialize:', error);
-        throw error;
+        console.error('[Clerk] ❌ Failed to initialize:', error);
+        console.error('[Clerk] Error name:', error.name);
+        console.error('[Clerk] Error message:', error.message);
+        console.error('[Clerk] Error stack:', error.stack);
+
+        clerkLoaded = false;
+        clerkInstance = null;
+        throw new Error(`Authentication initialization failed: ${error.message}`);
       }
     }
 
