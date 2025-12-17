@@ -445,49 +445,52 @@
     console.log('[Clerk] 🔄 Starting to load Clerk SDK from CDN...');
     console.log('[Clerk] Timestamp:', new Date().toISOString());
     console.log('[Clerk] Navigator online:', navigator.onLine);
-    console.log('[Clerk] User agent:', navigator.userAgent);
-  </script>
-  <script
-    id="clerk-sdk-script"
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ"
-    src="https://unpkg.com/@clerk/clerk-js@4.72.5/dist/clerk.browser.js"
-    type="text/javascript"
-    onload="console.log('[Clerk] ✅ SDK script (v4.72.5) loaded from unpkg. window.Clerk type:', typeof window.Clerk); console.log('[Clerk] window.Clerk keys:', window.Clerk ? Object.keys(window.Clerk).slice(0, 10) : 'undefined');"
-    onerror="console.error('[Clerk] ❌ SDK script onerror fired - Failed to load from CDN'); console.error('[Clerk] This could be a network issue, CORS issue, or CDN availability problem');"
-  ></script>
-  <script>
-    // Additional diagnostic logging after script tag
-    setTimeout(function() {
-      console.log('[Clerk] 📊 Checking Clerk SDK status after 1 second...');
-      console.log('[Clerk] window.Clerk exists:', typeof window.Clerk !== 'undefined');
-      console.log('[Clerk] window.Clerk type:', typeof window.Clerk);
-      if (window.Clerk) {
-        console.log('[Clerk] ✅ Clerk SDK is available!');
-        console.log('[Clerk] Clerk constructor:', window.Clerk);
-      } else {
-        console.error('[Clerk] ❌ Clerk SDK not found on window object after 1 second');
-        const scriptEl = document.getElementById('clerk-sdk-script');
-        if (scriptEl) {
-          console.log('[Clerk] 🔍 Script element debugging:');
-          console.log('  - Element exists:', true);
-          console.log('  - Script src:', scriptEl.src);
-          console.log('  - Script readyState:', scriptEl.readyState);
-          console.log('  - Script async:', scriptEl.async);
-          console.log('  - Script crossOrigin:', scriptEl.crossOrigin);
-        }
-        console.error('[Clerk] 💡 Troubleshooting tips:');
-        console.error('  1. Check browser console Network tab for failed requests');
-        console.error('  2. Verify internet connection is working');
-        console.error('  3. Try loading https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js directly in browser');
-        console.error('  4. Check for ad blockers or security extensions blocking the CDN');
-      }
-    }, 1000);
 
-    // Also check on page load
-    window.addEventListener('load', function() {
-      console.log('[Clerk] 📄 Page fully loaded event fired');
-      console.log('[Clerk] Final Clerk SDK check - window.Clerk:', typeof window.Clerk !== 'undefined' ? '✅ Available' : '❌ Not Available');
+    // Fallback CDN loading strategy
+    window.clerkLoadAttempts = 0;
+    window.clerkCDNs = [
+      'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js',
+      'https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js',
+      'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js'
+    ];
+
+    function loadClerkScript(cdnUrl, retryIndex) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.id = 'clerk-sdk-script';
+        script.src = cdnUrl;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-clerk-publishable-key', 'pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ');
+
+        script.onload = () => {
+          console.log('[Clerk] ✅ SDK loaded successfully from:', cdnUrl);
+          console.log('[Clerk] window.Clerk type:', typeof window.Clerk);
+          resolve();
+        };
+
+        script.onerror = () => {
+          console.error('[Clerk] ❌ Failed to load from:', cdnUrl);
+          document.head.removeChild(script);
+
+          // Try next CDN
+          if (retryIndex < window.clerkCDNs.length - 1) {
+            console.log('[Clerk] 🔄 Trying next CDN...');
+            loadClerkScript(window.clerkCDNs[retryIndex + 1], retryIndex + 1)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            reject(new Error('All CDN sources failed'));
+          }
+        };
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Start loading from first CDN
+    loadClerkScript(window.clerkCDNs[0], 0).catch(err => {
+      console.error('[Clerk] ❌ All CDN attempts failed:', err);
+      console.error('[Clerk] 💡 Please check your internet connection and try again later');
     });
   </script>
 
@@ -877,21 +880,28 @@
 
         // Try different initialization methods based on SDK version
         if (typeof window.Clerk === 'function') {
-          // Old method: Constructor
+          // Constructor method (v4 and earlier)
           console.log('[Clerk] Using constructor method: new window.Clerk()');
           clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
           await clerkInstance.load();
         } else if (window.Clerk && typeof window.Clerk.load === 'function') {
-          // New method: Direct load
+          // Direct load method (v5+)
           console.log('[Clerk] Using direct load method: window.Clerk.load()');
           await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
           clerkInstance = window.Clerk;
-        } else if (window.Clerk && window.Clerk.default && typeof window.Clerk.default === 'function') {
+        } else if (window.Clerk && window.Clerk.default) {
           // ES Module default export
-          console.log('[Clerk] Using default export: new window.Clerk.default()');
-          clerkInstance = new window.Clerk.default(CLERK_PUBLISHABLE_KEY);
-          await clerkInstance.load();
+          if (typeof window.Clerk.default === 'function') {
+            console.log('[Clerk] Using default export constructor');
+            clerkInstance = new window.Clerk.default(CLERK_PUBLISHABLE_KEY);
+            await clerkInstance.load();
+          } else if (typeof window.Clerk.default.load === 'function') {
+            console.log('[Clerk] Using default export load method');
+            await window.Clerk.default.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
+            clerkInstance = window.Clerk.default;
+          }
         } else {
+          console.error('[Clerk] Available methods:', Object.keys(window.Clerk || {}));
           throw new Error('Unable to determine correct Clerk initialization method. window.Clerk type: ' + typeof window.Clerk);
         }
 
@@ -1875,7 +1885,7 @@
         setError(null);
 
         try {
-          const response = await authenticatedFetch(`${API_BASE_URL}/property`, {
+          const response = await fetch(`${API_BASE_URL}/property`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
@@ -1904,7 +1914,7 @@
           const imagePromises = data.images.map(async (img) => {
             const originalUrl = img.url_high_res || img.url;
             try {
-              const proxyResponse = await authenticatedFetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+              const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
 
               if (!proxyResponse.ok) {
                 console.warn(`Failed to proxy image ${img.id}: HTTP ${proxyResponse.status}`);
