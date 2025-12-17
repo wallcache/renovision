@@ -924,11 +924,78 @@
       }
     }
 
+    // ============================================
+    // STATE PERSISTENCE FOR AUTHENTICATION FLOW
+    // ============================================
+
+    // Save app state to sessionStorage before authentication
+    function saveAppState(state) {
+      try {
+        const stateToSave = {
+          step: state.step,
+          rightmoveUrl: state.rightmoveUrl,
+          propertyInfo: state.propertyInfo,
+          propertyImages: state.propertyImages,
+          selectedImage: state.selectedImage,
+          designStyle: state.designStyle,
+          roomType: state.roomType,
+          timeOfDay: state.timeOfDay,
+          colourScheme: state.colourScheme,
+          flooring: state.flooring,
+          wallpaper: state.wallpaper,
+          gardenStyle: state.gardenStyle,
+          extraNotes: state.extraNotes,
+          activeToggleId: state.activeToggleId,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('renovision_app_state', JSON.stringify(stateToSave));
+        console.log('[State] Saved app state before authentication');
+      } catch (error) {
+        console.error('[State] Failed to save app state:', error);
+      }
+    }
+
+    // Restore app state from sessionStorage after authentication
+    function restoreAppState() {
+      try {
+        const savedState = sessionStorage.getItem('renovision_app_state');
+        if (!savedState) {
+          return null;
+        }
+
+        const state = JSON.parse(savedState);
+
+        // Check if state is recent (within last 30 minutes)
+        const MAX_AGE = 30 * 60 * 1000; // 30 minutes
+        if (Date.now() - state.timestamp > MAX_AGE) {
+          console.log('[State] Saved state expired, clearing');
+          sessionStorage.removeItem('renovision_app_state');
+          return null;
+        }
+
+        console.log('[State] Restored app state after authentication');
+        // Clear the saved state after restoring
+        sessionStorage.removeItem('renovision_app_state');
+        return state;
+      } catch (error) {
+        console.error('[State] Failed to restore app state:', error);
+        return null;
+      }
+    }
+
+    // Global state saver for use in authentication flow
+    window.__saveAppStateBeforeAuth = null;
+
     // Check if user is signed in, prompt if not
     async function requireAuthentication() {
       const clerk = await ensureClerkLoaded();
 
       if (!clerk.user) {
+        // Save current app state before authentication
+        if (window.__saveAppStateBeforeAuth) {
+          window.__saveAppStateBeforeAuth();
+        }
+
         // User not signed in - open sign-in modal
         await clerk.openSignIn();
 
@@ -1060,17 +1127,43 @@
     }
 
     function AccordionToggleGroup({ label, options, value, onChange, isOpen, onToggle, useColourSwatches }) {
+      const headerRef = useRef(null);
+
       const getSelectedLabel = () => {
         if (!value) return '';
         const option = options.find(o => o.id === value);
         return option ? option.label : '';
       };
 
+      const handleToggleClick = () => {
+        const wasOpen = isOpen;
+        onToggle();
+
+        // If opening this toggle, scroll it into perfect position after a brief delay
+        if (!wasOpen && headerRef.current) {
+          setTimeout(() => {
+            const headerElement = headerRef.current;
+            const headerRect = headerElement.getBoundingClientRect();
+            const currentScrollY = window.scrollY || window.pageYOffset;
+
+            // Calculate the position where the header would be at 80px from the top
+            // This aligns the user's finger/cursor with the newly opened section
+            const targetScrollY = currentScrollY + headerRect.top - 80;
+
+            window.scrollTo({
+              top: targetScrollY,
+              behavior: 'smooth'
+            });
+          }, 150); // Small delay to allow the accordion to start opening
+        }
+      };
+
       return (
         <div className="mb-4">
           <div
+            ref={headerRef}
             className={`toggle-group-header ${isOpen ? 'expanded' : ''}`}
-            onClick={onToggle}
+            onClick={handleToggleClick}
           >
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-linen-800">{label}</span>
@@ -1169,9 +1262,9 @@
       }, []);
 
       return (
-        <div className="min-h-[3rem] flex items-center justify-center">
+        <div className="min-h-[2.5rem] flex items-center justify-center px-4">
           <p
-            className={`text-linen-600 transition-opacity duration-300 absolute ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            className={`text-linen-600 text-sm md:text-base transition-opacity duration-300 text-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             style={{ transitionTimingFunction: 'ease-in-out' }}
           >
             {LOADING_MESSAGES[messageIndex]}
@@ -1197,7 +1290,7 @@
         <img
           src={frames[frameIndex]}
           alt="Loading animation"
-          className="mb-6 w-24 h-24 md:w-32 md:h-32"
+          className="mb-3 w-20 h-20 md:w-24 md:h-24"
           style={{
             mixBlendMode: 'multiply',
             filter: 'contrast(1.2) brightness(0.95)',
@@ -1768,6 +1861,60 @@
       const [extraNotes, setExtraNotes] = useState('');
 
       const [generatedResult, setGeneratedResult] = useState(null);
+
+      // ============================================
+      // STATE PERSISTENCE HOOKS
+      // ============================================
+
+      // Restore state on mount if user was redirected from authentication
+      useEffect(() => {
+        const savedState = restoreAppState();
+        if (savedState) {
+          console.log('[App] Restoring saved state after authentication');
+
+          // Restore all state variables
+          if (savedState.step) setStep(savedState.step);
+          if (savedState.rightmoveUrl) setRightmoveUrl(savedState.rightmoveUrl);
+          if (savedState.propertyInfo) setPropertyInfo(savedState.propertyInfo);
+          if (savedState.propertyImages) setPropertyImages(savedState.propertyImages);
+          if (savedState.selectedImage) setSelectedImage(savedState.selectedImage);
+          if (savedState.designStyle) setDesignStyle(savedState.designStyle);
+          if (savedState.roomType) setRoomType(savedState.roomType);
+          if (savedState.timeOfDay) setTimeOfDay(savedState.timeOfDay);
+          if (savedState.colourScheme) setColourScheme(savedState.colourScheme);
+          if (savedState.flooring) setFlooring(savedState.flooring);
+          if (savedState.wallpaper) setWallpaper(savedState.wallpaper);
+          if (savedState.gardenStyle) setGardenStyle(savedState.gardenStyle);
+          if (savedState.extraNotes) setExtraNotes(savedState.extraNotes);
+          if (savedState.activeToggleId) setActiveToggleId(savedState.activeToggleId);
+        }
+      }, []);
+
+      // Register state saver function for authentication flow
+      useEffect(() => {
+        window.__saveAppStateBeforeAuth = () => {
+          saveAppState({
+            step,
+            rightmoveUrl,
+            propertyInfo,
+            propertyImages,
+            selectedImage,
+            designStyle,
+            roomType,
+            timeOfDay,
+            colourScheme,
+            flooring,
+            wallpaper,
+            gardenStyle,
+            extraNotes,
+            activeToggleId
+          });
+        };
+
+        return () => {
+          window.__saveAppStateBeforeAuth = null;
+        };
+      }, [step, rightmoveUrl, propertyInfo, propertyImages, selectedImage, designStyle, roomType, timeOfDay, colourScheme, flooring, wallpaper, gardenStyle, extraNotes, activeToggleId]);
 
       // Function to get EXIF orientation and correct image rotation
       const getOrientedImage = async (file) => {
@@ -2348,9 +2495,9 @@
 
                 {isLoading ? (
                   <div className="max-w-3xl mx-auto px-4">
-                    {/* Rounded white box matching generated photo size */}
+                    {/* Rounded white box matching generated photo size - with padding to keep content contained */}
                     <div
-                      className="rounded-2xl aspect-[4/3] flex flex-col items-center justify-center"
+                      className="rounded-2xl aspect-[4/3] flex flex-col items-center justify-center p-6 md:p-8"
                       style={{
                         background: '#FFFFFF',
                         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)',
@@ -2360,8 +2507,8 @@
                       {/* Sparkling house animation */}
                       <SparklingHouseAnimation />
 
-                      {/* Loading text directly under logo */}
-                      <div className="text-center px-8">
+                      {/* Loading text closer to logo and fully contained within box */}
+                      <div className="text-center w-full">
                         <LoadingMessage />
                       </div>
                     </div>
