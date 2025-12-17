@@ -1160,35 +1160,25 @@
       };
 
       const handlePillClick = (optionId, currentIndex, event) => {
-        // Store the click position relative to the viewport
-        const clickY = event.clientY;
-
         // Call the onChange handler
         onChange(optionId);
 
-        // Auto-scroll to position the next pill at the click location
+        // Auto-scroll down by the height of one pill
         setTimeout(() => {
-          const nextIndex = currentIndex + 1;
+          // Get the height of the clicked pill
+          if (pillRefs.current[currentIndex]) {
+            const pill = pillRefs.current[currentIndex];
+            const pillHeight = pill.getBoundingClientRect().height;
 
-          // If there's a next pill, scroll it into position
-          if (nextIndex < options.length && pillRefs.current[nextIndex]) {
-            const nextPill = pillRefs.current[nextIndex];
-            const nextPillRect = nextPill.getBoundingClientRect();
-            const currentScrollY = window.scrollY || window.pageYOffset;
+            // Scroll down by the pill height (includes gap between pills)
+            const scrollAmount = pillHeight + 8; // 8px for the gap between pills
 
-            // Calculate how much to scroll so the next pill's center is at the click position
-            const nextPillCenter = nextPillRect.top + (nextPillRect.height / 2);
-            const scrollDelta = nextPillCenter - clickY;
-
-            // Only scroll if there's a meaningful difference (more than 10px)
-            if (Math.abs(scrollDelta) > 10) {
-              window.scrollTo({
-                top: currentScrollY + scrollDelta,
-                behavior: 'smooth'
-              });
-            }
+            window.scrollBy({
+              top: scrollAmount,
+              behavior: 'smooth'
+            });
           }
-        }, 50); // Small delay to allow state update
+        }, 50);
       };
 
       return (
