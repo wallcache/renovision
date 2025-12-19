@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Use Renovision - Transform Your Property Photos</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script>
+    window.tailwind = {
+      config: {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['Cormorant Garamond', 'Georgia', 'serif'],
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+            colors: {
+              linen: {
+                50: '#fdfcfb',
+                100: '#faf8f4',
+                200: '#f2efe9',
+                300: '#e8e4dc',
+                400: '#d4cfc4',
+                500: '#b8b1a4',
+                600: '#a89f93',
+                700: '#8a8278',
+                800: '#6b655c',
+                900: '#2c2c2c',
+              }
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #faf8f4;
+      color: #2c2c2c;
+    }
+
+    .font-serif {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    .linen-texture {
+      background-image:
+        linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.02'/%3E%3C/svg%3E");
+    }
+
+    /* Before/After Slider Styles */
+    .comparison-slider {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .comparison-slider img {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .img-wrapper {
+      position: relative;
+      width: 100%;
+      line-height: 0;
+    }
+
+    .img-after {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .slider-button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 50px;
+      height: 50px;
+      background: white;
+      border: 3px solid #2c2c2c;
+      border-radius: 50%;
+      cursor: ew-resize;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+
+    .slider-button:hover {
+      transform: translate(-50%, -50%) scale(1.1);
+    }
+
+    .slider-button::before,
+    .slider-button::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 0;
+      border-style: solid;
+    }
+
+    .slider-button::before {
+      left: 12px;
+      border-width: 8px 12px 8px 0;
+      border-color: transparent #2c2c2c transparent transparent;
+    }
+
+    .slider-button::after {
+      right: 12px;
+      border-width: 8px 0 8px 12px;
+      border-color: transparent transparent transparent #2c2c2c;
+    }
+
+    .slider-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      background: white;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .label {
+      position: absolute;
+      top: 20px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      z-index: 5;
+    }
+
+    .label-before {
+      left: 20px;
+    }
+
+    .label-after {
+      right: 20px;
+    }
+
+    .setting-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      background: linear-gradient(145deg, #fdfcfb 0%, #f8f6f2 100%);
+      border: 1px solid rgba(168, 159, 147, 0.2);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #6b655c;
+      margin: 4px;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #8a8278 0%, #6b655c 100%);
+      color: white;
+      border-radius: 50%;
+      font-weight: 600;
+      font-size: 18px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body class="min-h-screen linen-texture">
+  <!-- Header -->
+  <header class="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <a href="/" class="text-2xl font-serif font-semibold text-linen-900 hover:opacity-70 transition-opacity">
+        Renovision
+      </a>
+      <a href="/" class="px-6 py-2 bg-linen-800 text-white rounded-lg hover:bg-linen-700 transition-colors font-medium">
+        Try It Now
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-6 py-16">
+    <!-- Hero Section -->
+    <div class="text-center mb-16">
+      <h1 class="text-5xl md:text-6xl font-serif font-semibold text-linen-900 mb-6">
+        How to Use Renovision
+      </h1>
+      <p class="text-xl text-linen-700 max-w-3xl mx-auto leading-relaxed">
+        Transform any doer-upper property into a stunning visualisation of its potential.
+        See what could be, not just what is.
+      </p>
+    </div>
+
+    <!-- The Process -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-serif font-semibold text-linen-900 mb-12 text-center">
+        The Process
+      </h2>
+
+      <div class="space-y-8 max-w-3xl mx-auto">
+        <!-- Step 1 -->
+        <div class="flex items-start gap-4 p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <div class="step-number">1</div>
+          <div>
+            <h3 class="text-xl font-semibold text-linen-900 mb-2">Paste a Rightmove Link or Upload an Image</h3>
+            <p class="text-linen-700 leading-relaxed">
+              Simply paste any Rightmove property listing URL, and Renovision will automatically extract all the room images.
+              Alternatively, upload your own photos directly.
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flex items-start gap-4 p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <div class="step-number">2</div>
+          <div>
+            <h3 class="text-xl font-semibold text-linen-900 mb-2">Select the Room You Want to Transform</h3>
+            <p class="text-linen-700 leading-relaxed">
+              Choose which room image you'd like to renovate - whether it's a tired kitchen, overgrown garden,
+              or dated living room.
+            </p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flex items-start gap-4 p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <div class="step-number">3</div>
+          <div>
+            <h3 class="text-xl font-semibold text-linen-900 mb-2">Customize Your Vision</h3>
+            <p class="text-linen-700 leading-relaxed mb-4">
+              Use our intuitive toggles to select your preferred style, room type, colour scheme, flooring,
+              and more. Each option helps guide the AI to create your ideal renovation.
+            </p>
+            <div class="bg-linen-50 p-4 rounded-lg border border-linen-300/30">
+              <p class="text-sm font-semibold text-linen-900 mb-2">💡 Pro Tip: Be Explicit with Extra Notes</p>
+              <p class="text-sm text-linen-700">
+                The "Extra Notes" field is powerful - use it to be specific about what you want. For example:
+                <span class="block mt-2 italic text-linen-600">
+                  "Add a kitchen island with bar seating, install brass cabinet handles, include open shelving
+                  with warm wood tones"
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="flex items-start gap-4 p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <div class="step-number">4</div>
+          <div>
+            <h3 class="text-xl font-semibold text-linen-900 mb-2">Generate Your Renovation</h3>
+            <p class="text-linen-700 leading-relaxed">
+              Click "Generate Renovation" and watch as AI transforms the space in seconds. The AI preserves
+              the room's structure while applying your chosen style and finishes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Real Examples -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-serif font-semibold text-linen-900 mb-4 text-center">
+        Real Examples
+      </h2>
+      <p class="text-lg text-linen-700 text-center mb-12 max-w-2xl mx-auto">
+        Drag the slider to reveal the transformation. These are actual results generated by Renovision.
+      </p>
+
+      <!-- Example 1: Garden -->
+      <div class="mb-16">
+        <div class="mb-6">
+          <h3 class="text-2xl font-serif font-semibold text-linen-900 mb-3">
+            Overgrown Garden → Manicured English Garden
+          </h3>
+          <p class="text-linen-700 mb-4">
+            This overgrown London garden was transformed into a minimal, elegant outdoor space with
+            a pristine lawn, stepping stone path, and classic white hydrangeas.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="text-sm font-semibold text-linen-800">Settings used:</span>
+            <span class="setting-badge">Room: Garden</span>
+            <span class="setting-badge">Garden Style: English Cottage (simplified)</span>
+            <span class="setting-badge">Time: Day</span>
+          </div>
+        </div>
+
+        <div class="comparison-slider" id="garden-slider">
+          <div class="img-wrapper">
+            <img src="examples/IMG_5250.jpg" alt="Garden Before" class="img-before">
+            <div class="img-after" id="garden-after">
+              <img src="examples/IMG_5251.JPG" alt="Garden After">
+            </div>
+            <div class="slider-line"></div>
+            <div class="slider-button" id="garden-button"></div>
+            <div class="label label-before">Before</div>
+            <div class="label label-after">After</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Example 2: Kitchen -->
+      <div class="mb-16">
+        <div class="mb-6">
+          <h3 class="text-2xl font-serif font-semibold text-linen-900 mb-3">
+            Dated Kitchen → Modern Shaker Kitchen
+          </h3>
+          <p class="text-linen-700 mb-4">
+            A tired 1990s kitchen transformed into a sophisticated modern space with forest green
+            shaker cabinets, herringbone oak flooring, and a functional kitchen island with bar seating.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span class="text-sm font-semibold text-linen-800">Settings used:</span>
+            <span class="setting-badge">Room: Kitchen</span>
+            <span class="setting-badge">Style: English Contemporary</span>
+            <span class="setting-badge">Colour: Forest Green</span>
+            <span class="setting-badge">Flooring: Wood Parquet</span>
+            <span class="setting-badge">Time: Golden Hour</span>
+          </div>
+        </div>
+
+        <div class="comparison-slider" id="kitchen-slider">
+          <div class="img-wrapper">
+            <img src="examples/IMG_5252.jpg" alt="Kitchen Before" class="img-before">
+            <div class="img-after" id="kitchen-after">
+              <img src="examples/IMG_5257.JPG" alt="Kitchen After">
+            </div>
+            <div class="slider-line"></div>
+            <div class="slider-button" id="kitchen-button"></div>
+            <div class="label label-before">Before</div>
+            <div class="label label-after">After</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tips Section -->
+    <section class="mb-20">
+      <h2 class="text-4xl font-serif font-semibold text-linen-900 mb-8 text-center">
+        Tips for Best Results
+      </h2>
+
+      <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div class="p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <h3 class="text-lg font-semibold text-linen-900 mb-3">📸 Use Clear Photos</h3>
+          <p class="text-linen-700 text-sm leading-relaxed">
+            The better the original photo, the better the result. Well-lit, straight-on shots work best.
+          </p>
+        </div>
+
+        <div class="p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <h3 class="text-lg font-semibold text-linen-900 mb-3">🎨 Choose Your Style First</h3>
+          <p class="text-linen-700 text-sm leading-relaxed">
+            Select the room type and design style before tweaking colours and flooring for the most cohesive results.
+          </p>
+        </div>
+
+        <div class="p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <h3 class="text-lg font-semibold text-linen-900 mb-3">✍️ Be Specific in Extra Notes</h3>
+          <p class="text-linen-700 text-sm leading-relaxed">
+            Want a specific feature? Write it in the Extra Notes field: "Add a freestanding bathtub" or
+            "Include pendant lighting over the island".
+          </p>
+        </div>
+
+        <div class="p-6 bg-white/60 rounded-xl border border-linen-300/30">
+          <h3 class="text-lg font-semibold text-linen-900 mb-3">🔄 Try Multiple Variations</h3>
+          <p class="text-linen-700 text-sm leading-relaxed">
+            Generate multiple versions with different styles and settings to explore various design directions.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <div class="text-center py-12 px-6 bg-white/60 rounded-2xl border border-linen-300/30">
+      <h2 class="text-3xl font-serif font-semibold text-linen-900 mb-4">
+        Ready to Transform Your Property?
+      </h2>
+      <p class="text-linen-700 mb-8 max-w-xl mx-auto">
+        Start visualising the potential of any doer-upper property in seconds.
+      </p>
+      <a href="/" class="inline-block px-8 py-3 bg-linen-800 text-white rounded-lg hover:bg-linen-700 transition-colors font-medium text-lg">
+        Get Started
+      </a>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-linen-300/30 py-8 px-6 mt-16">
+    <div class="max-w-6xl mx-auto text-center text-sm text-linen-500">
+      <p>Powered by cutting-edge generative models. Designed & built by Wallcache Studios.</p>
+    </div>
+  </footer>
+
+  <!-- Slider JavaScript -->
+  <script>
+    function initSlider(sliderId, afterId, buttonId) {
+      const slider = document.getElementById(sliderId);
+      const afterDiv = document.getElementById(afterId);
+      const button = document.getElementById(buttonId);
+
+      if (!slider || !afterDiv || !button) return;
+
+      let isDragging = false;
+
+      function updateSlider(clientX) {
+        const rect = slider.getBoundingClientRect();
+        let x = clientX - rect.left;
+
+        // Clamp between 0 and width
+        x = Math.max(0, Math.min(x, rect.width));
+
+        const percentage = (x / rect.width) * 100;
+
+        afterDiv.style.clipPath = `inset(0 ${100 - percentage}% 0 0)`;
+        button.style.left = `${percentage}%`;
+      }
+
+      // Mouse events
+      button.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        updateSlider(e.clientX);
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      // Touch events
+      button.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        e.preventDefault();
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        updateSlider(touch.clientX);
+      });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+
+      // Click on slider to jump
+      slider.addEventListener('click', (e) => {
+        if (e.target === button) return;
+        updateSlider(e.clientX);
+      });
+
+      // Initialize at 50%
+      afterDiv.style.clipPath = 'inset(0 50% 0 0)';
+    }
+
+    // Initialize both sliders
+    document.addEventListener('DOMContentLoaded', () => {
+      initSlider('garden-slider', 'garden-after', 'garden-button');
+      initSlider('kitchen-slider', 'kitchen-after', 'kitchen-button');
+    });
+  </script>
+</body>
+</html>

@@ -2346,7 +2346,7 @@
           {/* Header */}
           <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
             <div className="max-w-5xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-6">
                 <img
                   src={LOGO_URL}
                   alt="Renovision"
@@ -2354,6 +2354,12 @@
                   onClick={resetApp}
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
+                <a
+                  href="/how-to-use.html"
+                  className="text-sm font-medium text-linen-700 hover:text-linen-900 transition-colors hidden sm:block"
+                >
+                  How to Use
+                </a>
               </div>
 
               <div className="flex items-center gap-3">
