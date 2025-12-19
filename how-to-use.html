@@ -197,9 +197,12 @@
       <a href="/" class="text-2xl font-serif font-semibold text-linen-900 hover:opacity-70 transition-opacity">
         Renovision
       </a>
-      <a href="/" class="px-6 py-2 bg-linen-800 text-white rounded-lg hover:bg-linen-700 transition-colors font-medium">
-        Try It Now
-      </a>
+      <div class="flex items-center gap-3">
+        <a href="/" class="px-6 py-2 bg-linen-800 text-white rounded-lg hover:bg-linen-700 transition-colors font-medium">
+          Try It Now
+        </a>
+        <div id="clerk-user-button-mount"></div>
+      </div>
     </div>
   </header>
 
@@ -417,6 +420,140 @@
       <p>Powered by cutting-edge generative models. Designed & built by Wallcache Studios.</p>
     </div>
   </footer>
+
+  <!-- Clerk Authentication SDK -->
+  <script>
+    console.log('[Clerk] Loading Clerk SDK for How to Use page...');
+
+    window.clerkCDNs = [
+      'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js',
+      'https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js'
+    ];
+
+    function loadClerkScript(cdnUrl, retryIndex) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.id = 'clerk-sdk-script';
+        script.src = cdnUrl;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-clerk-publishable-key', 'pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ');
+
+        script.onload = () => {
+          console.log('[Clerk] SDK loaded successfully');
+          resolve();
+        };
+
+        script.onerror = () => {
+          console.error('[Clerk] Failed to load from:', cdnUrl);
+          document.head.removeChild(script);
+
+          if (retryIndex < window.clerkCDNs.length - 1) {
+            loadClerkScript(window.clerkCDNs[retryIndex + 1], retryIndex + 1)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            reject(new Error('All CDN sources failed'));
+          }
+        };
+
+        document.head.appendChild(script);
+      });
+    }
+
+    loadClerkScript(window.clerkCDNs[0], 0).catch(err => {
+      console.error('[Clerk] All CDN attempts failed:', err);
+    });
+  </script>
+
+  <!-- Clerk Initialization and UserButton Mount -->
+  <script>
+    const CLERK_PUBLISHABLE_KEY = 'pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ';
+    let clerkInstance = null;
+
+    async function initClerk() {
+      try {
+        // Wait for Clerk SDK to be available
+        let attempts = 0;
+        while (!window.Clerk && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (!window.Clerk) {
+          console.error('[Clerk] SDK not available');
+          return null;
+        }
+
+        // Initialize Clerk
+        if (typeof window.Clerk === 'function') {
+          clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
+          await clerkInstance.load();
+        } else if (window.Clerk && typeof window.Clerk.load === 'function') {
+          await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
+          clerkInstance = window.Clerk;
+        }
+
+        console.log('[Clerk] Initialized successfully');
+        return clerkInstance;
+      } catch (error) {
+        console.error('[Clerk] Initialization failed:', error);
+        return null;
+      }
+    }
+
+    async function mountUserButton() {
+      const clerk = await initClerk();
+      if (!clerk) return;
+
+      const userButtonDiv = document.getElementById('clerk-user-button-mount');
+      if (!userButtonDiv) return;
+
+      if (clerk.user) {
+        // User is signed in - mount UserButton
+        clerk.mountUserButton(userButtonDiv, {
+          afterSignOutUrl: '/how-to-use.html',
+          appearance: {
+            elements: {
+              rootBox: 'inline-flex items-center',
+              avatarBox: 'w-9 h-9'
+            }
+          }
+        });
+      } else {
+        // User is signed out - show Sign In button
+        const signInButton = document.createElement('button');
+        signInButton.className = 'btn-secondary text-sm py-2 px-4';
+        signInButton.textContent = 'Sign In';
+        signInButton.onclick = async () => {
+          await clerk.openSignIn();
+          setTimeout(() => location.reload(), 1000);
+        };
+        userButtonDiv.appendChild(signInButton);
+      }
+    }
+
+    // Mount when page loads
+    window.addEventListener('load', mountUserButton);
+  </script>
+
+  <!-- Add button styles -->
+  <style>
+    .btn-secondary {
+      background: linear-gradient(145deg, #fdfcfb 0%, #f8f6f2 100%);
+      border: 1px solid rgba(168, 159, 147, 0.3);
+      color: #6b655c;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: linear-gradient(145deg, #f8f6f2 0%, #f2efe9 100%);
+      border-color: rgba(168, 159, 147, 0.5);
+      transform: translateY(-1px);
+    }
+  </style>
 
   <!-- Slider JavaScript -->
   <script>
