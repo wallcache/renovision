@@ -1916,77 +1916,100 @@
         }
       }, []);
 
-      // Check auth status on mount and periodically
-      useEffect(() => {
-        let interval = null;
-
-        async function checkAuthStatus() {
-          try {
-            const clerk = await ensureClerkLoaded();
-            setIsSignedIn(!!clerk.user);
-          } catch (error) {
-            console.error('[Clerk] Failed to check auth status:', error);
-          }
-        }
-
-        // Check immediately
-        checkAuthStatus();
-
-        // Check every 2 seconds for auth changes (after sign in/out)
-        interval = setInterval(checkAuthStatus, 2000);
-
-        return () => {
-          if (interval) {
-            clearInterval(interval);
-          }
-        };
-      }, []);
-
       // Mount Clerk UserButton when signed in, or Sign In button when signed out
       useEffect(() => {
         let unmountUserButton = null;
+        let checkInterval = null;
 
         async function mountClerkUI() {
           try {
+            // Wait for Clerk to be ready
             const clerk = await ensureClerkLoaded();
             const userButtonDiv = document.getElementById('clerk-user-button-mount');
 
             if (!userButtonDiv) {
+              console.warn('[Clerk] User button mount point not found');
               return;
             }
 
+            console.log('[Clerk] Checking auth state, user:', clerk.user);
+
             // Clear previous content
+            if (unmountUserButton) {
+              try {
+                unmountUserButton();
+              } catch (e) {
+                console.warn('[Clerk] Error unmounting:', e);
+              }
+              unmountUserButton = null;
+            }
             userButtonDiv.innerHTML = '';
 
-            if (isSignedIn && clerk.user) {
-              // User is signed in - mount UserButton (standard Clerk way)
+            if (clerk.user) {
+              // User is signed in - mount UserButton with avatar (standard Clerk way)
+              console.log('[Clerk] Mounting UserButton for signed-in user');
               unmountUserButton = clerk.mountUserButton(userButtonDiv, {
-                afterSignOutUrl: '/'
+                afterSignOutUrl: '/',
+                appearance: {
+                  elements: {
+                    rootBox: 'inline-flex items-center',
+                    avatarBox: 'w-9 h-9'
+                  }
+                }
               });
+              setIsSignedIn(true);
             } else {
               // User is signed out - create a custom sign-in button
+              console.log('[Clerk] Mounting Sign In button for signed-out user');
               const signInButton = document.createElement('button');
               signInButton.className = 'btn-secondary text-sm py-2 px-4';
               signInButton.textContent = 'Sign In';
               signInButton.onclick = async () => {
                 await clerk.openSignIn();
+                // After sign in modal closes, re-check auth state
+                setTimeout(() => mountClerkUI(), 500);
               };
               userButtonDiv.appendChild(signInButton);
+              setIsSignedIn(false);
             }
           } catch (error) {
             console.error('[Clerk] Failed to mount user button:', error);
           }
         }
 
+        // Mount immediately
         mountClerkUI();
 
-        // Cleanup on unmount or when isSignedIn changes
+        // Check auth state every 2 seconds to detect sign in/out
+        checkInterval = setInterval(() => {
+          ensureClerkLoaded().then(clerk => {
+            const wasSignedIn = isSignedIn;
+            const isNowSignedIn = !!clerk.user;
+
+            // Only re-mount if auth state changed
+            if (wasSignedIn !== isNowSignedIn) {
+              console.log('[Clerk] Auth state changed, re-mounting UI');
+              mountClerkUI();
+            }
+          }).catch(err => {
+            console.error('[Clerk] Error checking auth state:', err);
+          });
+        }, 2000);
+
+        // Cleanup on unmount
         return () => {
+          if (checkInterval) {
+            clearInterval(checkInterval);
+          }
           if (unmountUserButton) {
-            unmountUserButton();
+            try {
+              unmountUserButton();
+            } catch (e) {
+              console.warn('[Clerk] Error during cleanup:', e);
+            }
           }
         };
-      }, [isSignedIn]);
+      }, []);
 
       // Register state saver function for authentication flow
       useEffect(() => {
