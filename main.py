@@ -15,6 +15,7 @@ import re
 import json
 import base64
 import asyncio
+import jwt
 from io import BytesIO
 from typing import Optional
 from datetime import datetime
@@ -27,7 +28,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, HttpUrl
 from dotenv import load_dotenv
 from clerk_backend_api import Clerk
-from clerk_backend_api.jwks_helpers import authenticate_request
 
 # Import our Rightmove scraper
 from rightmove_scraper import scrape_rightmove_listing, PropertyListing
@@ -157,53 +157,83 @@ async def verify_clerk_session(authorization: Optional[str] = Header(None)) -> d
     session_token = parts[1]
 
     try:
-        # Verify token using Clerk SDK
-        # Use verify_session to validate the session token
-        # This method verifies the JWT signature and checks if session is active
         print(f"[AUTH] Attempting to verify session token...")
 
-        # The correct method is verify_session, not verify_token
-        session = clerk_client.sessions.verify_session(session_token)
+        # Decode JWT without verification first to get the header and payload
+        unverified_header = jwt.get_unverified_header(session_token)
+        unverified_payload = jwt.decode(session_token, options={"verify_signature": False})
 
-        print(f"[AUTH] ✅ Session verified successfully. User ID: {session.user_id}")
+        # Get the key ID from the JWT header
+        kid = unverified_header.get('kid')
+        if not kid:
+            raise HTTPException(status_code=401, detail="Invalid token: missing key ID")
 
-        # Extract user information
+        # Get the issuer from the JWT payload to construct the JWKS URL
+        issuer = unverified_payload.get('iss')
+        if not issuer:
+            raise HTTPException(status_code=401, detail="Invalid token: missing issuer")
+
+        # Construct JWKS URL from issuer (e.g., https://clerk.example.com/.well-known/jwks.json)
+        jwks_url = f"{issuer.rstrip('/')}/.well-known/jwks.json"
+
+        # Fetch Clerk's JWKS (JSON Web Key Set) to get the public key
+        async with httpx.AsyncClient() as client:
+            response = await client.get(jwks_url)
+
+            if response.status_code != 200:
+                print(f"[AUTH] Failed to fetch JWKS: {response.status_code}")
+                raise HTTPException(status_code=401, detail="Failed to verify token")
+
+            jwks = response.json()
+
+            # Find the matching key
+            signing_key = None
+            for key in jwks.get('keys', []):
+                if key.get('kid') == kid:
+                    # Convert JWK to PEM format for PyJWT
+                    from jwt.algorithms import RSAAlgorithm
+                    signing_key = RSAAlgorithm.from_jwk(json.dumps(key))
+                    break
+
+            if not signing_key:
+                raise HTTPException(status_code=401, detail="Invalid token: key not found")
+
+        # Verify and decode the JWT
+        verified_claims = jwt.decode(
+            session_token,
+            signing_key,
+            algorithms=['RS256'],
+            options={"verify_signature": True, "verify_exp": True}
+        )
+
+        print(f"[AUTH] ✅ Session verified successfully. User ID: {verified_claims.get('sub')}")
+
+        # Extract user information from JWT claims
         return {
-            "user_id": session.user_id,
-            "session_id": session.id,
-            "status": session.status
+            "user_id": verified_claims.get("sub"),
+            "session_id": verified_claims.get("sid"),
+            "status": "active"
         }
 
-    except AttributeError as e:
-        # Method doesn't exist - fallback to JWT verification
-        print(f"[AUTH] ⚠️ verify_session not available, trying alternative method...")
-        print(f"[AUTH] Error: {type(e).__name__}: {str(e)}")
-
-        try:
-            # Alternative: Use JWT verification with JWKS
-            # This verifies the token signature using Clerk's public keys
-            from clerk_backend_api.jwks_helpers import verify_token
-
-            # Verify the JWT token
-            verified_token = verify_token(session_token, clerk_client)
-
-            print(f"[AUTH] ✅ Token verified via JWT. User ID: {verified_token.get('sub')}")
-
-            return {
-                "user_id": verified_token.get("sub"),
-                "session_id": verified_token.get("sid"),
-                "status": "active"
-            }
-        except Exception as jwt_error:
-            print(f"[AUTH] ❌ JWT verification also failed: {type(jwt_error).__name__}: {str(jwt_error)}")
-            raise HTTPException(
-                status_code=401,
-                detail="Invalid or expired session. Please sign in again."
-            )
-
+    except jwt.ExpiredSignatureError:
+        print(f"[AUTH] ❌ Token expired")
+        raise HTTPException(
+            status_code=401,
+            detail="Session expired. Please sign in again."
+        )
+    except jwt.InvalidTokenError as e:
+        print(f"[AUTH] ❌ Invalid token: {str(e)}")
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid session token. Please sign in again."
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         # Token invalid, expired, or revoked
         print(f"[AUTH] ❌ Token verification failed: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired session. Please sign in again."
@@ -923,30 +953,26 @@ async def list_available_models():
 
 @app.post("/property", response_model=PropertyResponse)
 async def get_property_images(
-    request: RightmoveRequest,
-    user: dict = Depends(verify_clerk_session)
+    request: RightmoveRequest
 ):
     """
     Extract property images from a Rightmove listing URL.
     Returns list of images with detected room types.
-    REQUIRES AUTHENTICATION.
+    NO AUTHENTICATION REQUIRED - users can fetch property data before signing in.
     """
-    # Optional: Log user activity
-    print(f"[INFO] Property fetch by user {user['user_id']}")
+    print(f"[INFO] Property fetch (unauthenticated)")
     return await get_property_from_rightmove(str(request.url))
 
 
 @app.get("/proxy-image")
 async def proxy_image(
-    url: str,
-    user: dict = Depends(verify_clerk_session)
+    url: str
 ):
     """
     Proxy images from Rightmove - returns base64 encoded image data.
-    REQUIRES AUTHENTICATION.
+    NO AUTHENTICATION REQUIRED - users can fetch property images before signing in.
     """
-    # Optional: Log user activity
-    print(f"[INFO] Image proxy by user {user['user_id']}")
+    print(f"[INFO] Image proxy (unauthenticated)")
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
