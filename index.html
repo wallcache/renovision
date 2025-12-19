@@ -445,49 +445,52 @@
     console.log('[Clerk] 🔄 Starting to load Clerk SDK from CDN...');
     console.log('[Clerk] Timestamp:', new Date().toISOString());
     console.log('[Clerk] Navigator online:', navigator.onLine);
-    console.log('[Clerk] User agent:', navigator.userAgent);
-  </script>
-  <script
-    id="clerk-sdk-script"
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ"
-    src="https://unpkg.com/@clerk/clerk-js@4.72.5/dist/clerk.browser.js"
-    type="text/javascript"
-    onload="console.log('[Clerk] ✅ SDK script (v4.72.5) loaded from unpkg. window.Clerk type:', typeof window.Clerk); console.log('[Clerk] window.Clerk keys:', window.Clerk ? Object.keys(window.Clerk).slice(0, 10) : 'undefined');"
-    onerror="console.error('[Clerk] ❌ SDK script onerror fired - Failed to load from CDN'); console.error('[Clerk] This could be a network issue, CORS issue, or CDN availability problem');"
-  ></script>
-  <script>
-    // Additional diagnostic logging after script tag
-    setTimeout(function() {
-      console.log('[Clerk] 📊 Checking Clerk SDK status after 1 second...');
-      console.log('[Clerk] window.Clerk exists:', typeof window.Clerk !== 'undefined');
-      console.log('[Clerk] window.Clerk type:', typeof window.Clerk);
-      if (window.Clerk) {
-        console.log('[Clerk] ✅ Clerk SDK is available!');
-        console.log('[Clerk] Clerk constructor:', window.Clerk);
-      } else {
-        console.error('[Clerk] ❌ Clerk SDK not found on window object after 1 second');
-        const scriptEl = document.getElementById('clerk-sdk-script');
-        if (scriptEl) {
-          console.log('[Clerk] 🔍 Script element debugging:');
-          console.log('  - Element exists:', true);
-          console.log('  - Script src:', scriptEl.src);
-          console.log('  - Script readyState:', scriptEl.readyState);
-          console.log('  - Script async:', scriptEl.async);
-          console.log('  - Script crossOrigin:', scriptEl.crossOrigin);
-        }
-        console.error('[Clerk] 💡 Troubleshooting tips:');
-        console.error('  1. Check browser console Network tab for failed requests');
-        console.error('  2. Verify internet connection is working');
-        console.error('  3. Try loading https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js directly in browser');
-        console.error('  4. Check for ad blockers or security extensions blocking the CDN');
-      }
-    }, 1000);
 
-    // Also check on page load
-    window.addEventListener('load', function() {
-      console.log('[Clerk] 📄 Page fully loaded event fired');
-      console.log('[Clerk] Final Clerk SDK check - window.Clerk:', typeof window.Clerk !== 'undefined' ? '✅ Available' : '❌ Not Available');
+    // Fallback CDN loading strategy
+    window.clerkLoadAttempts = 0;
+    window.clerkCDNs = [
+      'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js',
+      'https://unpkg.com/@clerk/clerk-js@5/dist/clerk.browser.js',
+      'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@4/dist/clerk.browser.js'
+    ];
+
+    function loadClerkScript(cdnUrl, retryIndex) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.id = 'clerk-sdk-script';
+        script.src = cdnUrl;
+        script.crossOrigin = 'anonymous';
+        script.setAttribute('data-clerk-publishable-key', 'pk_test_YnVyc3RpbmctcHVnLTUyLmNsZXJrLmFjY291bnRzLmRldiQ');
+
+        script.onload = () => {
+          console.log('[Clerk] ✅ SDK loaded successfully from:', cdnUrl);
+          console.log('[Clerk] window.Clerk type:', typeof window.Clerk);
+          resolve();
+        };
+
+        script.onerror = () => {
+          console.error('[Clerk] ❌ Failed to load from:', cdnUrl);
+          document.head.removeChild(script);
+
+          // Try next CDN
+          if (retryIndex < window.clerkCDNs.length - 1) {
+            console.log('[Clerk] 🔄 Trying next CDN...');
+            loadClerkScript(window.clerkCDNs[retryIndex + 1], retryIndex + 1)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            reject(new Error('All CDN sources failed'));
+          }
+        };
+
+        document.head.appendChild(script);
+      });
+    }
+
+    // Start loading from first CDN
+    loadClerkScript(window.clerkCDNs[0], 0).catch(err => {
+      console.error('[Clerk] ❌ All CDN attempts failed:', err);
+      console.error('[Clerk] 💡 Please check your internet connection and try again later');
     });
   </script>
 
@@ -877,21 +880,28 @@
 
         // Try different initialization methods based on SDK version
         if (typeof window.Clerk === 'function') {
-          // Old method: Constructor
+          // Constructor method (v4 and earlier)
           console.log('[Clerk] Using constructor method: new window.Clerk()');
           clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
           await clerkInstance.load();
         } else if (window.Clerk && typeof window.Clerk.load === 'function') {
-          // New method: Direct load
+          // Direct load method (v5+)
           console.log('[Clerk] Using direct load method: window.Clerk.load()');
           await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
           clerkInstance = window.Clerk;
-        } else if (window.Clerk && window.Clerk.default && typeof window.Clerk.default === 'function') {
+        } else if (window.Clerk && window.Clerk.default) {
           // ES Module default export
-          console.log('[Clerk] Using default export: new window.Clerk.default()');
-          clerkInstance = new window.Clerk.default(CLERK_PUBLISHABLE_KEY);
-          await clerkInstance.load();
+          if (typeof window.Clerk.default === 'function') {
+            console.log('[Clerk] Using default export constructor');
+            clerkInstance = new window.Clerk.default(CLERK_PUBLISHABLE_KEY);
+            await clerkInstance.load();
+          } else if (typeof window.Clerk.default.load === 'function') {
+            console.log('[Clerk] Using default export load method');
+            await window.Clerk.default.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
+            clerkInstance = window.Clerk.default;
+          }
         } else {
+          console.error('[Clerk] Available methods:', Object.keys(window.Clerk || {}));
           throw new Error('Unable to determine correct Clerk initialization method. window.Clerk type: ' + typeof window.Clerk);
         }
 
@@ -914,11 +924,78 @@
       }
     }
 
+    // ============================================
+    // STATE PERSISTENCE FOR AUTHENTICATION FLOW
+    // ============================================
+
+    // Save app state to sessionStorage before authentication
+    function saveAppState(state) {
+      try {
+        const stateToSave = {
+          step: state.step,
+          rightmoveUrl: state.rightmoveUrl,
+          propertyInfo: state.propertyInfo,
+          propertyImages: state.propertyImages,
+          selectedImage: state.selectedImage,
+          designStyle: state.designStyle,
+          roomType: state.roomType,
+          timeOfDay: state.timeOfDay,
+          colourScheme: state.colourScheme,
+          flooring: state.flooring,
+          wallpaper: state.wallpaper,
+          gardenStyle: state.gardenStyle,
+          extraNotes: state.extraNotes,
+          activeToggleId: state.activeToggleId,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('renovision_app_state', JSON.stringify(stateToSave));
+        console.log('[State] Saved app state before authentication');
+      } catch (error) {
+        console.error('[State] Failed to save app state:', error);
+      }
+    }
+
+    // Restore app state from sessionStorage after authentication
+    function restoreAppState() {
+      try {
+        const savedState = sessionStorage.getItem('renovision_app_state');
+        if (!savedState) {
+          return null;
+        }
+
+        const state = JSON.parse(savedState);
+
+        // Check if state is recent (within last 30 minutes)
+        const MAX_AGE = 30 * 60 * 1000; // 30 minutes
+        if (Date.now() - state.timestamp > MAX_AGE) {
+          console.log('[State] Saved state expired, clearing');
+          sessionStorage.removeItem('renovision_app_state');
+          return null;
+        }
+
+        console.log('[State] Restored app state after authentication');
+        // Clear the saved state after restoring
+        sessionStorage.removeItem('renovision_app_state');
+        return state;
+      } catch (error) {
+        console.error('[State] Failed to restore app state:', error);
+        return null;
+      }
+    }
+
+    // Global state saver for use in authentication flow
+    window.__saveAppStateBeforeAuth = null;
+
     // Check if user is signed in, prompt if not
     async function requireAuthentication() {
       const clerk = await ensureClerkLoaded();
 
       if (!clerk.user) {
+        // Save current app state before authentication
+        if (window.__saveAppStateBeforeAuth) {
+          window.__saveAppStateBeforeAuth();
+        }
+
         // User not signed in - open sign-in modal
         await clerk.openSignIn();
 
@@ -1003,7 +1080,7 @@
     function TogglePill({ label, active, onClick }) {
       return (
         <button
-          onClick={onClick}
+          onClick={(e) => onClick(e)}
           className={`toggle-pill ${active ? 'active' : ''}`}
         >
           {label}
@@ -1024,7 +1101,7 @@
 
       return (
         <button
-          onClick={onClick}
+          onClick={(e) => onClick(e)}
           className="toggle-pill"
           style={active ? {
             background: getTintedBackground(swatch),
@@ -1050,17 +1127,66 @@
     }
 
     function AccordionToggleGroup({ label, options, value, onChange, isOpen, onToggle, useColourSwatches }) {
+      const headerRef = useRef(null);
+      const pillRefs = useRef([]);
+
       const getSelectedLabel = () => {
         if (!value) return '';
         const option = options.find(o => o.id === value);
         return option ? option.label : '';
       };
 
+      const handleToggleClick = () => {
+        const wasOpen = isOpen;
+        onToggle();
+
+        // If opening this toggle, scroll it into perfect position after a brief delay
+        if (!wasOpen && headerRef.current) {
+          setTimeout(() => {
+            const headerElement = headerRef.current;
+            const headerRect = headerElement.getBoundingClientRect();
+            const currentScrollY = window.scrollY || window.pageYOffset;
+
+            // Calculate the position where the header would be at 80px from the top
+            // This aligns the user's finger/cursor with the newly opened section
+            const targetScrollY = currentScrollY + headerRect.top - 80;
+
+            window.scrollTo({
+              top: targetScrollY,
+              behavior: 'smooth'
+            });
+          }, 150); // Small delay to allow the accordion to start opening
+        }
+      };
+
+      const handlePillClick = (optionId, currentIndex, event) => {
+        // Call the onChange handler
+        onChange(optionId);
+
+        // Auto-scroll down by the height of one pill + extra spacing
+        setTimeout(() => {
+          // Get the height of the clicked pill
+          if (pillRefs.current[currentIndex]) {
+            const pill = pillRefs.current[currentIndex];
+            const pillHeight = pill.getBoundingClientRect().height;
+
+            // Scroll down by pill height * 1.3 for better positioning
+            const scrollAmount = pillHeight * 1.3;
+
+            window.scrollBy({
+              top: scrollAmount,
+              behavior: 'smooth'
+            });
+          }
+        }, 80); // Slightly longer delay for smoother feel
+      };
+
       return (
         <div className="mb-4">
           <div
+            ref={headerRef}
             className={`toggle-group-header ${isOpen ? 'expanded' : ''}`}
-            onClick={onToggle}
+            onClick={handleToggleClick}
           >
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-linen-800">{label}</span>
@@ -1085,22 +1211,24 @@
 
           <div className={`toggle-group-content ${isOpen ? 'expanded' : 'collapsed'}`}>
             <div className="toggle-group" style={{ paddingTop: '0.5rem' }}>
-              {options.map(option =>
+              {options.map((option, index) =>
                 useColourSwatches ? (
-                  <ColourTogglePill
-                    key={option.id}
-                    label={option.label}
-                    swatch={option.swatch}
-                    active={value === option.id}
-                    onClick={() => onChange(option.id)}
-                  />
+                  <div key={option.id} ref={el => pillRefs.current[index] = el}>
+                    <ColourTogglePill
+                      label={option.label}
+                      swatch={option.swatch}
+                      active={value === option.id}
+                      onClick={(e) => handlePillClick(option.id, index, e)}
+                    />
+                  </div>
                 ) : (
-                  <TogglePill
-                    key={option.id}
-                    label={option.label}
-                    active={value === option.id}
-                    onClick={() => onChange(option.id)}
-                  />
+                  <div key={option.id} ref={el => pillRefs.current[index] = el}>
+                    <TogglePill
+                      label={option.label}
+                      active={value === option.id}
+                      onClick={(e) => handlePillClick(option.id, index, e)}
+                    />
+                  </div>
                 )
               )}
             </div>
@@ -1159,9 +1287,9 @@
       }, []);
 
       return (
-        <div className="min-h-[3rem] flex items-center justify-center">
+        <div className="min-h-[2.5rem] flex items-center justify-center px-4">
           <p
-            className={`text-linen-600 transition-opacity duration-300 absolute ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+            className={`text-linen-600 text-sm md:text-base transition-opacity duration-300 text-center ${isVisible ? 'opacity-100' : 'opacity-0'}`}
             style={{ transitionTimingFunction: 'ease-in-out' }}
           >
             {LOADING_MESSAGES[messageIndex]}
@@ -1187,7 +1315,7 @@
         <img
           src={frames[frameIndex]}
           alt="Loading animation"
-          className="mb-6 w-24 h-24 md:w-32 md:h-32"
+          className="mb-3 w-20 h-20 md:w-24 md:h-24"
           style={{
             mixBlendMode: 'multiply',
             filter: 'contrast(1.2) brightness(0.95)',
@@ -1651,6 +1779,123 @@
     }
 
     // ============================================
+    // IMAGE SLIDER COMPONENT
+    // ============================================
+
+    function ImageSlider({ beforeSrc, afterSrc, beforeAlt, afterAlt }) {
+      const [sliderPosition, setSliderPosition] = useState(50);
+      const [isDragging, setIsDragging] = useState(false);
+      const containerRef = useRef(null);
+
+      const handleMove = useCallback((clientX) => {
+        if (!containerRef.current) return;
+
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        setSliderPosition(percentage);
+      }, []);
+
+      const handleMouseDown = (e) => {
+        setIsDragging(true);
+        handleMove(e.clientX);
+      };
+
+      const handleMouseMove = useCallback((e) => {
+        if (!isDragging) return;
+        handleMove(e.clientX);
+      }, [isDragging, handleMove]);
+
+      const handleMouseUp = () => {
+        setIsDragging(false);
+      };
+
+      const handleTouchStart = (e) => {
+        setIsDragging(true);
+        handleMove(e.touches[0].clientX);
+      };
+
+      const handleTouchMove = useCallback((e) => {
+        if (!isDragging) return;
+        handleMove(e.touches[0].clientX);
+      }, [isDragging, handleMove]);
+
+      const handleTouchEnd = () => {
+        setIsDragging(false);
+      };
+
+      useEffect(() => {
+        if (isDragging) {
+          document.addEventListener('mousemove', handleMouseMove);
+          document.addEventListener('mouseup', handleMouseUp);
+          document.addEventListener('touchmove', handleTouchMove);
+          document.addEventListener('touchend', handleTouchEnd);
+        }
+
+        return () => {
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+          document.removeEventListener('touchmove', handleTouchMove);
+          document.removeEventListener('touchend', handleTouchEnd);
+        };
+      }, [isDragging, handleMouseMove, handleTouchMove]);
+
+      return (
+        <div
+          ref={containerRef}
+          className="relative w-full overflow-hidden rounded-xl shadow-lg cursor-ew-resize select-none"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+        >
+          {/* Before Image */}
+          <img
+            src={beforeSrc}
+            alt={beforeAlt}
+            className="w-full h-auto block"
+            draggable="false"
+          />
+
+          {/* After Image - Clipped */}
+          <div
+            className="absolute top-0 left-0 w-full h-full overflow-hidden"
+            style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+          >
+            <img
+              src={afterSrc}
+              alt={afterAlt}
+              className="w-full h-auto block"
+              draggable="false"
+            />
+          </div>
+
+          {/* Slider Line */}
+          <div
+            className="absolute top-0 bottom-0 w-1 bg-white shadow-lg"
+            style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+          />
+
+          {/* Slider Button */}
+          <div
+            className="absolute top-1/2 w-12 h-12 bg-white border-4 border-linen-900 rounded-full shadow-xl flex items-center justify-center transform -translate-y-1/2"
+            style={{ left: `${sliderPosition}%`, transform: 'translate(-50%, -50%)' }}
+          >
+            <svg className="w-6 h-6 text-linen-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+            </svg>
+          </div>
+
+          {/* Labels */}
+          <div className="absolute top-4 left-4 bg-white/95 px-3 py-1 rounded-md text-sm font-semibold text-linen-900 shadow">
+            Before
+          </div>
+          <div className="absolute top-4 right-4 bg-white/95 px-3 py-1 rounded-md text-sm font-semibold text-linen-900 shadow">
+            After
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
     // MAIN APP
     // ============================================
 
@@ -1758,6 +2003,184 @@
       const [extraNotes, setExtraNotes] = useState('');
 
       const [generatedResult, setGeneratedResult] = useState(null);
+      const [isSignedIn, setIsSignedIn] = useState(false);
+      const [showHowToUse, setShowHowToUse] = useState(false);
+
+      // ============================================
+      // STATE PERSISTENCE HOOKS
+      // ============================================
+
+      // Restore state on mount if user was redirected from authentication
+      useEffect(() => {
+        const savedState = restoreAppState();
+        if (savedState) {
+          console.log('[App] Restoring saved state after authentication');
+
+          // Restore all state variables
+          if (savedState.step) setStep(savedState.step);
+          if (savedState.rightmoveUrl) setRightmoveUrl(savedState.rightmoveUrl);
+          if (savedState.propertyInfo) setPropertyInfo(savedState.propertyInfo);
+          if (savedState.propertyImages) setPropertyImages(savedState.propertyImages);
+          if (savedState.selectedImage) setSelectedImage(savedState.selectedImage);
+          if (savedState.designStyle) setDesignStyle(savedState.designStyle);
+          if (savedState.roomType) setRoomType(savedState.roomType);
+          if (savedState.timeOfDay) setTimeOfDay(savedState.timeOfDay);
+          if (savedState.colourScheme) setColourScheme(savedState.colourScheme);
+          if (savedState.flooring) setFlooring(savedState.flooring);
+          if (savedState.wallpaper) setWallpaper(savedState.wallpaper);
+          if (savedState.gardenStyle) setGardenStyle(savedState.gardenStyle);
+          if (savedState.extraNotes) setExtraNotes(savedState.extraNotes);
+          if (savedState.activeToggleId) setActiveToggleId(savedState.activeToggleId);
+        }
+      }, []);
+
+      // Mount Clerk UserButton when signed in, or Sign In button when signed out
+      useEffect(() => {
+        let unmountUserButton = null;
+        let checkInterval = null;
+        let currentAuthState = null;
+        let isMounting = false;
+
+        async function mountClerkUI() {
+          // Prevent multiple simultaneous mount operations
+          if (isMounting) {
+            console.log('[Clerk] Mount already in progress, skipping');
+            return;
+          }
+
+          try {
+            isMounting = true;
+
+            // Wait for Clerk to be ready
+            const clerk = await ensureClerkLoaded();
+            const userButtonDiv = document.getElementById('clerk-user-button-mount');
+
+            if (!userButtonDiv) {
+              console.warn('[Clerk] User button mount point not found');
+              isMounting = false;
+              return;
+            }
+
+            const isNowSignedIn = !!clerk.user;
+
+            // Only re-mount if auth state actually changed
+            if (currentAuthState === isNowSignedIn) {
+              console.log('[Clerk] Auth state unchanged, keeping existing UI');
+              isMounting = false;
+              return;
+            }
+
+            console.log('[Clerk] Auth state changed to:', isNowSignedIn ? 'signed in' : 'signed out');
+            currentAuthState = isNowSignedIn;
+
+            // Clear previous content
+            if (unmountUserButton) {
+              try {
+                unmountUserButton();
+              } catch (e) {
+                console.warn('[Clerk] Error unmounting:', e);
+              }
+              unmountUserButton = null;
+            }
+            userButtonDiv.innerHTML = '';
+
+            if (clerk.user) {
+              // User is signed in - mount UserButton with avatar (standard Clerk way)
+              console.log('[Clerk] Mounting UserButton for signed-in user');
+              unmountUserButton = clerk.mountUserButton(userButtonDiv, {
+                afterSignOutUrl: '/',
+                appearance: {
+                  elements: {
+                    rootBox: 'inline-flex items-center',
+                    avatarBox: 'w-9 h-9'
+                  }
+                }
+              });
+              setIsSignedIn(true);
+            } else {
+              // User is signed out - create a custom sign-in button
+              console.log('[Clerk] Mounting Sign In button for signed-out user');
+              const signInButton = document.createElement('button');
+              signInButton.className = 'btn-secondary text-sm py-2 px-4';
+              signInButton.textContent = 'Sign In';
+              signInButton.onclick = async () => {
+                await clerk.openSignIn();
+                // After sign in modal closes, check auth state
+                setTimeout(() => {
+                  currentAuthState = null; // Force re-mount check
+                  mountClerkUI();
+                }, 1000);
+              };
+              userButtonDiv.appendChild(signInButton);
+              setIsSignedIn(false);
+            }
+
+            isMounting = false;
+          } catch (error) {
+            console.error('[Clerk] Failed to mount user button:', error);
+            isMounting = false;
+          }
+        }
+
+        // Mount immediately
+        mountClerkUI();
+
+        // Check auth state every 3 seconds to detect sign in/out
+        // But only re-mount if state actually changed
+        checkInterval = setInterval(() => {
+          ensureClerkLoaded().then(clerk => {
+            const isNowSignedIn = !!clerk.user;
+
+            // Only re-mount if auth state changed
+            if (currentAuthState !== isNowSignedIn) {
+              console.log('[Clerk] Auth state changed in interval check, re-mounting UI');
+              mountClerkUI();
+            }
+          }).catch(err => {
+            console.error('[Clerk] Error checking auth state:', err);
+          });
+        }, 3000);
+
+        // Cleanup on unmount
+        return () => {
+          if (checkInterval) {
+            clearInterval(checkInterval);
+          }
+          if (unmountUserButton) {
+            try {
+              unmountUserButton();
+            } catch (e) {
+              console.warn('[Clerk] Error during cleanup:', e);
+            }
+          }
+        };
+      }, []);
+
+      // Register state saver function for authentication flow
+      useEffect(() => {
+        window.__saveAppStateBeforeAuth = () => {
+          saveAppState({
+            step,
+            rightmoveUrl,
+            propertyInfo,
+            propertyImages,
+            selectedImage,
+            designStyle,
+            roomType,
+            timeOfDay,
+            colourScheme,
+            flooring,
+            wallpaper,
+            gardenStyle,
+            extraNotes,
+            activeToggleId
+          });
+        };
+
+        return () => {
+          window.__saveAppStateBeforeAuth = null;
+        };
+      }, [step, rightmoveUrl, propertyInfo, propertyImages, selectedImage, designStyle, roomType, timeOfDay, colourScheme, flooring, wallpaper, gardenStyle, extraNotes, activeToggleId]);
 
       // Function to get EXIF orientation and correct image rotation
       const getOrientedImage = async (file) => {
@@ -1875,7 +2298,7 @@
         setError(null);
 
         try {
-          const response = await authenticatedFetch(`${API_BASE_URL}/property`, {
+          const response = await fetch(`${API_BASE_URL}/property`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url })
@@ -1904,7 +2327,7 @@
           const imagePromises = data.images.map(async (img) => {
             const originalUrl = img.url_high_res || img.url;
             try {
-              const proxyResponse = await authenticatedFetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
+              const proxyResponse = await fetch(`${API_BASE_URL}/proxy-image?url=${encodeURIComponent(originalUrl)}`);
 
               if (!proxyResponse.ok) {
                 console.warn(`Failed to proxy image ${img.id}: HTTP ${proxyResponse.status}`);
@@ -2068,7 +2491,7 @@
           {/* Header */}
           <header className="bg-linen-100/80 backdrop-blur-sm border-b border-linen-300/30 py-4 px-6 sticky top-0 z-50">
             <div className="max-w-5xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-6">
                 <img
                   src={LOGO_URL}
                   alt="Renovision"
@@ -2078,11 +2501,20 @@
                 />
               </div>
 
-              {step > 1 && (
-                <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
-                  Start Over
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowHowToUse(true)}
+                  className="text-sm font-medium text-linen-700 hover:text-linen-900 transition-colors"
+                >
+                  How to Use
                 </button>
-              )}
+                {step > 1 && (
+                  <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
+                    Start Over
+                  </button>
+                )}
+                <div id="clerk-user-button-mount"></div>
+              </div>
             </div>
           </header>
 
@@ -2338,9 +2770,9 @@
 
                 {isLoading ? (
                   <div className="max-w-3xl mx-auto px-4">
-                    {/* Rounded white box matching generated photo size */}
+                    {/* Rounded white box matching generated photo size - with padding to keep content contained */}
                     <div
-                      className="rounded-2xl aspect-[4/3] flex flex-col items-center justify-center"
+                      className="rounded-2xl aspect-[4/3] flex flex-col items-center justify-center p-6 md:p-8"
                       style={{
                         background: '#FFFFFF',
                         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.02)',
@@ -2350,8 +2782,8 @@
                       {/* Sparkling house animation */}
                       <SparklingHouseAnimation />
 
-                      {/* Loading text directly under logo */}
-                      <div className="text-center px-8">
+                      {/* Loading text closer to logo and fully contained within box */}
+                      <div className="text-center w-full">
                         <LoadingMessage />
                       </div>
                     </div>
@@ -2437,6 +2869,182 @@
               </div>
             )}
           </main>
+
+          {/* How to Use Modal */}
+          {showHowToUse && (
+            <div
+              className="fixed inset-0 bg-black/70 z-50 overflow-y-auto"
+              style={{ backdropFilter: 'blur(12px)' }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setShowHowToUse(false);
+              }}
+            >
+              <div className="min-h-screen px-4 py-8 flex items-start justify-center">
+                <div className="bg-white rounded-2xl max-w-4xl w-full my-8 shadow-2xl">
+                  {/* Modal Header */}
+                  <div className="border-b border-gray-200 px-8 py-6 flex items-center justify-between sticky top-0 bg-white rounded-t-2xl z-10">
+                    <h2 className="text-3xl font-serif font-semibold text-gray-900">How to Use Renovision</h2>
+                    <button
+                      onClick={() => setShowHowToUse(false)}
+                      className="text-gray-500 hover:text-gray-900 transition-colors p-2"
+                    >
+                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Modal Content */}
+                  <div className="px-8 py-8 space-y-12 bg-white">
+                    {/* Real Examples Section - Moved to top */}
+                    <section>
+                      <h3 className="text-2xl font-serif font-semibold text-gray-900 mb-3 text-center">Real Examples</h3>
+                      <p className="text-gray-700 text-center mb-8 max-w-2xl mx-auto">
+                        Drag the slider to reveal the transformation. These are actual results generated by Renovision.
+                      </p>
+
+                      {/* Example 1: Garden */}
+                      <div className="mb-10">
+                        <div className="mb-4">
+                          <h4 className="text-xl font-serif font-semibold text-gray-900 mb-2">
+                            Overgrown Garden → Manicured English Garden
+                          </h4>
+                          <p className="text-sm text-gray-700 mb-3">
+                            This overgrown London garden was transformed into a minimal, elegant outdoor space.
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <span className="text-xs font-semibold text-gray-900">Settings:</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Garden</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">English Cottage Style</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Day</span>
+                          </div>
+                        </div>
+                        <ImageSlider
+                          beforeSrc="examples/IMG_5250.jpg"
+                          afterSrc="examples/IMG_5251.JPG"
+                          beforeAlt="Garden Before"
+                          afterAlt="Garden After"
+                        />
+                      </div>
+
+                      {/* Example 2: Kitchen */}
+                      <div className="mb-10">
+                        <div className="mb-4">
+                          <h4 className="text-xl font-serif font-semibold text-gray-900 mb-2">
+                            Dated Kitchen → Modern Shaker Kitchen
+                          </h4>
+                          <p className="text-sm text-gray-700 mb-3">
+                            A tired 1990s kitchen transformed into a sophisticated modern space with forest green shaker cabinets.
+                          </p>
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            <span className="text-xs font-semibold text-gray-900">Settings:</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Kitchen</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">English Contemporary</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Forest Green</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Wood Parquet</span>
+                            <span className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-700">Golden Hour</span>
+                          </div>
+                        </div>
+                        <ImageSlider
+                          beforeSrc="examples/IMG_5252.jpg"
+                          afterSrc="examples/IMG_5257.JPG"
+                          beforeAlt="Kitchen Before"
+                          afterAlt="Kitchen After"
+                        />
+                      </div>
+                    </section>
+
+                    {/* The Process */}
+                    <section>
+                      <h3 className="text-2xl font-serif font-semibold text-gray-900 mb-6 text-center">The Process</h3>
+                      <div className="space-y-4">
+                        {/* Step 1 */}
+                        <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
+                          <div>
+                            <h5 className="font-semibold text-gray-900 mb-1">Paste a Rightmove Link or Upload an Image</h5>
+                            <p className="text-sm text-gray-700">
+                              Paste any Rightmove property URL, or upload your own photos directly.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Step 2 */}
+                        <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center font-semibold text-sm">2</div>
+                          <div>
+                            <h5 className="font-semibold text-gray-900 mb-1">Select the Room to Transform</h5>
+                            <p className="text-sm text-gray-700">
+                              Choose which room you'd like to renovate.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Step 3 */}
+                        <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center font-semibold text-sm">3</div>
+                          <div>
+                            <h5 className="font-semibold text-gray-900 mb-1">Customize Your Vision</h5>
+                            <p className="text-sm text-gray-700 mb-2">
+                              Use the toggles to select style, colours, flooring, and more.
+                            </p>
+                            <div className="bg-gray-100 p-3 rounded border border-gray-200">
+                              <p className="text-xs font-semibold text-gray-900 mb-1">💡 Pro Tip: Be Explicit</p>
+                              <p className="text-xs text-gray-700">
+                                Use "Extra Notes" to be specific: <em>"Add a kitchen island with bar seating, brass handles, open shelving"</em>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Step 4 */}
+                        <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex-shrink-0 w-8 h-8 bg-gray-800 text-white rounded-full flex items-center justify-center font-semibold text-sm">4</div>
+                          <div>
+                            <h5 className="font-semibold text-gray-900 mb-1">Generate Your Renovation</h5>
+                            <p className="text-sm text-gray-700">
+                              Click "Generate" and watch AI transform the space in seconds.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Tips Section */}
+                    <section>
+                      <h3 className="text-2xl font-serif font-semibold text-gray-900 mb-6 text-center">Tips for Best Results</h3>
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2">📸 Use Clear Photos</h5>
+                          <p className="text-xs text-gray-700">
+                            Well-lit, straight-on shots work best.
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2">🎨 Choose Style First</h5>
+                          <p className="text-xs text-gray-700">
+                            Select room type and design style before tweaking details.
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2">✍️ Be Specific</h5>
+                          <p className="text-xs text-gray-700">
+                            Use Extra Notes for specific features you want.
+                          </p>
+                        </div>
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h5 className="text-sm font-semibold text-gray-900 mb-2">🔄 Try Variations</h5>
+                          <p className="text-xs text-gray-700">
+                            Generate multiple versions to explore different directions.
+                          </p>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <footer className="border-t border-linen-300/30 py-8 px-6 mt-16">
             <div className="max-w-5xl mx-auto text-center text-sm text-linen-500">
