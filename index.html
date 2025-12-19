@@ -1886,6 +1886,7 @@
       const [extraNotes, setExtraNotes] = useState('');
 
       const [generatedResult, setGeneratedResult] = useState(null);
+      const [isSignedIn, setIsSignedIn] = useState(false);
 
       // ============================================
       // STATE PERSISTENCE HOOKS
@@ -1914,6 +1915,78 @@
           if (savedState.activeToggleId) setActiveToggleId(savedState.activeToggleId);
         }
       }, []);
+
+      // Check auth status on mount and periodically
+      useEffect(() => {
+        let interval = null;
+
+        async function checkAuthStatus() {
+          try {
+            const clerk = await ensureClerkLoaded();
+            setIsSignedIn(!!clerk.user);
+          } catch (error) {
+            console.error('[Clerk] Failed to check auth status:', error);
+          }
+        }
+
+        // Check immediately
+        checkAuthStatus();
+
+        // Check every 2 seconds for auth changes (after sign in/out)
+        interval = setInterval(checkAuthStatus, 2000);
+
+        return () => {
+          if (interval) {
+            clearInterval(interval);
+          }
+        };
+      }, []);
+
+      // Mount Clerk UserButton when signed in, or Sign In button when signed out
+      useEffect(() => {
+        let unmountUserButton = null;
+
+        async function mountClerkUI() {
+          try {
+            const clerk = await ensureClerkLoaded();
+            const userButtonDiv = document.getElementById('clerk-user-button-mount');
+
+            if (!userButtonDiv) {
+              return;
+            }
+
+            // Clear previous content
+            userButtonDiv.innerHTML = '';
+
+            if (isSignedIn && clerk.user) {
+              // User is signed in - mount UserButton (standard Clerk way)
+              unmountUserButton = clerk.mountUserButton(userButtonDiv, {
+                afterSignOutUrl: '/'
+              });
+            } else {
+              // User is signed out - create a custom sign-in button
+              const signInButton = document.createElement('button');
+              signInButton.className = 'btn-secondary text-sm py-2 px-4';
+              signInButton.textContent = 'Sign In';
+              signInButton.onclick = async () => {
+                await clerk.openSignIn();
+              };
+              userButtonDiv.appendChild(signInButton);
+            }
+          } catch (error) {
+            console.error('[Clerk] Failed to mount user button:', error);
+          }
+        }
+
+        mountClerkUI();
+
+        // Cleanup on unmount or when isSignedIn changes
+        return () => {
+          if (unmountUserButton) {
+            unmountUserButton();
+          }
+        };
+      }, [isSignedIn]);
 
       // Register state saver function for authentication flow
       useEffect(() => {
@@ -2260,11 +2333,14 @@
                 />
               </div>
 
-              {step > 1 && (
-                <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
-                  Start Over
-                </button>
-              )}
+              <div className="flex items-center gap-3">
+                {step > 1 && (
+                  <button onClick={resetApp} className="btn-secondary text-sm py-2 px-4">
+                    Start Over
+                  </button>
+                )}
+                <div id="clerk-user-button-mount"></div>
+              </div>
             </div>
           </header>
 
