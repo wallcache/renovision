@@ -1785,7 +1785,39 @@
     function ImageSlider({ beforeSrc, afterSrc, beforeAlt, afterAlt }) {
       const [sliderPosition, setSliderPosition] = useState(50);
       const [isDragging, setIsDragging] = useState(false);
+      const [isTouching, setIsTouching] = useState(false);
       const containerRef = useRef(null);
+      const scrollPosition = useRef(0);
+
+      const lockBodyScroll = useCallback(() => {
+        // Save current scroll position
+        scrollPosition.current = window.pageYOffset || document.documentElement.scrollTop;
+
+        // Lock scroll on body
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${scrollPosition.current}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+
+        // Additional iOS Safari fix
+        document.documentElement.style.overflow = 'hidden';
+      }, []);
+
+      const unlockBodyScroll = useCallback(() => {
+        // Restore scroll
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+        document.documentElement.style.overflow = '';
+
+        // Restore scroll position
+        window.scrollTo(0, scrollPosition.current);
+      }, []);
 
       const handleMove = useCallback((clientX) => {
         if (!containerRef.current) return;
@@ -1810,25 +1842,34 @@
         setIsDragging(false);
       };
 
-      const handleTouchStart = (e) => {
+      const handleTouchStart = useCallback((e) => {
+        setIsTouching(true);
         setIsDragging(true);
+        lockBodyScroll();
         handleMove(e.touches[0].clientX);
-      };
+      }, [lockBodyScroll, handleMove]);
 
       const handleTouchMove = useCallback((e) => {
-        if (!isDragging) return;
+        if (!isDragging && !isTouching) return;
+        // Prevent default to stop page scrolling
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        e.stopPropagation();
         handleMove(e.touches[0].clientX);
-      }, [isDragging, handleMove]);
+      }, [isDragging, isTouching, handleMove]);
 
-      const handleTouchEnd = () => {
+      const handleTouchEnd = useCallback(() => {
+        setIsTouching(false);
         setIsDragging(false);
-      };
+        unlockBodyScroll();
+      }, [unlockBodyScroll]);
 
       useEffect(() => {
         if (isDragging) {
           document.addEventListener('mousemove', handleMouseMove);
           document.addEventListener('mouseup', handleMouseUp);
-          document.addEventListener('touchmove', handleTouchMove);
+          document.addEventListener('touchmove', handleTouchMove, { passive: false });
           document.addEventListener('touchend', handleTouchEnd);
         }
 
@@ -1838,7 +1879,14 @@
           document.removeEventListener('touchmove', handleTouchMove);
           document.removeEventListener('touchend', handleTouchEnd);
         };
-      }, [isDragging, handleMouseMove, handleTouchMove]);
+      }, [isDragging, handleMouseMove, handleTouchMove, handleTouchEnd]);
+
+      // Cleanup body scroll lock on unmount
+      useEffect(() => {
+        return () => {
+          unlockBodyScroll();
+        };
+      }, [unlockBodyScroll]);
 
       return (
         <div
